@@ -1,0 +1,15 @@
+NEXUS - FONTES PARA PUBLICACAO
+
+Comece pelo README.md na raiz do projeto.
+O guia docs/Instalacao_Windows_HeidiSQL.md explica a instalacao no Windows.
+
+Esta copia publica nao inclui credenciais reais nem o JAR compilado.
+Use recompilar.bat/recompilar.sh com JDK 17 e Maven, ou obtenha o executavel
+em uma Release e salve como dist/nexus.jar.
+
+O modelo SMTP e smtp.exemplo.properties. Crie smtp.local.properties com a
+conta remetente que voce vai utilizar. O arquivo local e ignorado pelo Git.
+
+Para instalar pelo HeidiSQL, use database/heidisql/Instalar_Nexus_HeidiSQL.sql
+em uma base ainda sem o esquema Nexus. A instalacao integrada deve ser
+conferida no SQL Server real antes da apresentacao.

@@ -1,0 +1,17 @@
+/target/
+*.jar
+*.zip
+.env
+.env.*
+!.env.example
+*.local.properties
+configurar-sqlserver.local.bat
+*.log
+*.bak
+*.mdf
+*.ldf
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+__pycache__/
