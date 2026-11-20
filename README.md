@@ -1,4 +1,4 @@
-# Nexus — CRM imobiliário
+# Nexus CRM imobiliário
 
 **Java 17 · Spring Boot 3.5.7 · Thymeleaf · Microsoft SQL Server**
 
