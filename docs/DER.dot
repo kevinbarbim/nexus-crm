@@ -1,0 +1,24 @@
+digraph CRM {
+ graph [rankdir=TB,splines=polyline,nodesep=0.38,ranksep=0.72,bgcolor="white",dpi=180];
+ node [shape=record,fontname="Arial",fontsize=12,color="#45565b",style="filled",fillcolor="#f8faf9",penwidth=1.2];
+ edge [fontname="Arial",fontsize=10,color="#6d7c79",arrowhead=crow,arrowtail=tee,dir=both,arrowsize=0.65];
+ USUARIOS [label="usuarios|PK id\lnome · email · perfil\lativo · senha_hash\l"];
+ LEADS [label="leads|PK id\lFK responsavel_id\lFK atualizado_por_id\letapa · origem · datas\l"];
+ IMOVEIS [label="imoveis|PK id\lFK criado_por_id\ltipo · valor · situacao\l"];
+ TOKENS [label="tokens_recuperacao|PK id\lFK usuario_id\lhash · validade · usado\l"];
+ INTERESSES [label="interesses|PK id\lFK lead_id\lFK imovel_id\lUNIQUE lead + imovel\l"];
+ VISITAS [label="visitas|PK id\lFK lead_id · imovel_id\ldata · situacao\lvirtual · km\l"];
+ PROPOSTAS [label="propostas|PK id\lFK lead_id · imovel_id\lvalor · situacao\l"];
+ ATIVIDADES [label="atividades|PK id\lFK lead_id\lprazo · concluida_em\l"];
+ OCORRENCIAS [label="ocorrencias|PK id\lFK lead_id\lcategoria · descricao\l"];
+ HISTORICO [label="historico_etapas|PK id\lFK lead_id · autor_id\letapas · data\l"];
+ {rank=same; LEADS; IMOVEIS; TOKENS;}
+ {rank=same; VISITAS; PROPOSTAS;}
+ {rank=same; ATIVIDADES; OCORRENCIAS; HISTORICO;}
+ USUARIOS -> LEADS [label="1 : 0..N"];USUARIOS -> IMOVEIS [label="1 : 0..N"];USUARIOS -> TOKENS [label="1 : 0..N"];
+ LEADS -> INTERESSES;IMOVEIS -> INTERESSES;LEADS -> VISITAS;IMOVEIS -> VISITAS;LEADS -> PROPOSTAS;IMOVEIS -> PROPOSTAS;
+ LEADS -> ATIVIDADES [minlen=2];LEADS -> OCORRENCIAS [minlen=2];LEADS -> HISTORICO [minlen=2];
+ INTERESSES -> VISITAS [style=dashed,label="FK composta"];
+ INTERESSES -> PROPOSTAS [style=dashed,label="FK composta"];
+ INTERESSES -> ATIVIDADES [style=invis];VISITAS -> OCORRENCIAS [style=invis];PROPOSTAS -> HISTORICO [style=invis];USUARIOS -> HISTORICO [constraint=false];
+}

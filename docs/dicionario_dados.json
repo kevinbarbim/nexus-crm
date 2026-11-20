@@ -1,0 +1,560 @@
+[
+  {
+    "tabela": "usuarios",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_usuarios PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "nome",
+        "tipo": "NVARCHAR(120)",
+        "obrigatorio": true,
+        "definicao": "nome NVARCHAR(120) NOT NULL"
+      },
+      {
+        "nome": "email",
+        "tipo": "NVARCHAR(180)",
+        "obrigatorio": true,
+        "definicao": "email NVARCHAR(180) NOT NULL"
+      },
+      {
+        "nome": "senha_hash",
+        "tipo": "NVARCHAR(100)",
+        "obrigatorio": true,
+        "definicao": "senha_hash NVARCHAR(100) NOT NULL"
+      },
+      {
+        "nome": "perfil",
+        "tipo": "NVARCHAR(20)",
+        "obrigatorio": true,
+        "definicao": "perfil NVARCHAR(20) NOT NULL"
+      },
+      {
+        "nome": "ativo",
+        "tipo": "BIT",
+        "obrigatorio": true,
+        "definicao": "ativo BIT NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT UQ_usuarios_email UNIQUE (email)",
+      "CONSTRAINT CK_usuarios_perfil CHECK (perfil IN (N'ADMIN',N'CORRETOR'))"
+    ]
+  },
+  {
+    "tabela": "leads",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_leads PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "nome",
+        "tipo": "NVARCHAR(120)",
+        "obrigatorio": true,
+        "definicao": "nome NVARCHAR(120) NOT NULL"
+      },
+      {
+        "nome": "email",
+        "tipo": "NVARCHAR(180)",
+        "obrigatorio": false,
+        "definicao": "email NVARCHAR(180) NULL"
+      },
+      {
+        "nome": "telefone",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "telefone NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "origem",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "origem NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "etapa",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "etapa NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "orcamento",
+        "tipo": "DECIMAL(19,2)",
+        "obrigatorio": true,
+        "definicao": "orcamento DECIMAL(19,2) NOT NULL"
+      },
+      {
+        "nome": "observacoes",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "observacoes NVARCHAR(2000) NULL"
+      },
+      {
+        "nome": "motivo_perda",
+        "tipo": "NVARCHAR(200)",
+        "obrigatorio": false,
+        "definicao": "motivo_perda NVARCHAR(200) NULL"
+      },
+      {
+        "nome": "criado_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "criado_em DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "primeiro_contato_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": false,
+        "definicao": "primeiro_contato_em DATETIME2(6) NULL"
+      },
+      {
+        "nome": "encerrado_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": false,
+        "definicao": "encerrado_em DATETIME2(6) NULL"
+      },
+      {
+        "nome": "responsavel_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "responsavel_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "atualizado_por_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "atualizado_por_id BIGINT NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT CK_leads_origem CHECK (origem IN (N'INDICACAO',N'PORTAL',N'REDES_SOCIAIS',N'SITE',N'OUTRO'))",
+      "CONSTRAINT CK_leads_etapa CHECK (etapa IN (N'NOVO',N'CONTATADO',N'QUALIFICADO',N'VISITA',N'PROPOSTA',N'GANHO',N'PERDIDO'))",
+      "CONSTRAINT CK_leads_orcamento CHECK (orcamento>=0)",
+      "CONSTRAINT FK_leads_responsavel_id FOREIGN KEY (responsavel_id) REFERENCES dbo.usuarios(id)",
+      "CONSTRAINT FK_leads_atualizado_por_id FOREIGN KEY (atualizado_por_id) REFERENCES dbo.usuarios(id)",
+      "CONSTRAINT CK_leads_datas CHECK ((primeiro_contato_em IS NULL OR primeiro_contato_em>=criado_em) AND (encerrado_em IS NULL OR encerrado_em>=criado_em))",
+      "CONSTRAINT CK_leads_perda CHECK (etapa<>N'PERDIDO' OR (motivo_perda IS NOT NULL AND motivo_perda IN(N'ORCAMENTO',N'SEM_RETORNO',N'IMOVEL_INADEQUADO',N'DOCUMENTACAO',N'OUTRO')))",
+      "CONSTRAINT CK_leads_fechamento CHECK ((etapa IN(N'GANHO',N'PERDIDO') AND encerrado_em IS NOT NULL) OR (etapa NOT IN(N'GANHO',N'PERDIDO') AND encerrado_em IS NULL))"
+    ]
+  },
+  {
+    "tabela": "imoveis",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_imoveis PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "titulo",
+        "tipo": "NVARCHAR(160)",
+        "obrigatorio": true,
+        "definicao": "titulo NVARCHAR(160) NOT NULL"
+      },
+      {
+        "nome": "tipo",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "tipo NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "finalidade",
+        "tipo": "NVARCHAR(20)",
+        "obrigatorio": true,
+        "definicao": "finalidade NVARCHAR(20) NOT NULL"
+      },
+      {
+        "nome": "cidade",
+        "tipo": "NVARCHAR(100)",
+        "obrigatorio": true,
+        "definicao": "cidade NVARCHAR(100) NOT NULL"
+      },
+      {
+        "nome": "bairro",
+        "tipo": "NVARCHAR(100)",
+        "obrigatorio": true,
+        "definicao": "bairro NVARCHAR(100) NOT NULL"
+      },
+      {
+        "nome": "quartos",
+        "tipo": "INT",
+        "obrigatorio": true,
+        "definicao": "quartos INT NOT NULL"
+      },
+      {
+        "nome": "area",
+        "tipo": "DECIMAL(12,2)",
+        "obrigatorio": true,
+        "definicao": "area DECIMAL(12,2) NOT NULL"
+      },
+      {
+        "nome": "valor",
+        "tipo": "DECIMAL(19,2)",
+        "obrigatorio": true,
+        "definicao": "valor DECIMAL(19,2) NOT NULL"
+      },
+      {
+        "nome": "situacao",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "situacao NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "descricao",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "descricao NVARCHAR(2000) NULL"
+      },
+      {
+        "nome": "criado_por_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "criado_por_id BIGINT NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT CK_imoveis_tipo CHECK (tipo IN (N'CASA',N'APARTAMENTO',N'TERRENO',N'COMERCIAL'))",
+      "CONSTRAINT CK_imoveis_finalidade CHECK (finalidade IN (N'VENDA',N'LOCACAO'))",
+      "CONSTRAINT CK_imoveis_quartos CHECK (quartos>=0)",
+      "CONSTRAINT CK_imoveis_area CHECK (area>=0)",
+      "CONSTRAINT CK_imoveis_valor CHECK (valor>=0)",
+      "CONSTRAINT CK_imoveis_situacao CHECK (situacao IN (N'DISPONIVEL',N'RESERVADO',N'NEGOCIADO',N'INATIVO'))",
+      "CONSTRAINT FK_imoveis_criado_por_id FOREIGN KEY (criado_por_id) REFERENCES dbo.usuarios(id)"
+    ]
+  },
+  {
+    "tabela": "interesses",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_interesses PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "imovel_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "imovel_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "criado_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "criado_em DATETIME2(6) NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_interesses_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT FK_interesses_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id)",
+      "CONSTRAINT UQ_interesses_lead_imovel UNIQUE(lead_id,imovel_id)"
+    ]
+  },
+  {
+    "tabela": "atividades",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_atividades PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "titulo",
+        "tipo": "NVARCHAR(160)",
+        "obrigatorio": true,
+        "definicao": "titulo NVARCHAR(160) NOT NULL"
+      },
+      {
+        "nome": "tipo",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "tipo NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "prazo",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "prazo DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "concluida_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": false,
+        "definicao": "concluida_em DATETIME2(6) NULL"
+      },
+      {
+        "nome": "observacoes",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "observacoes NVARCHAR(2000) NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_atividades_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT CK_atividades_tipo CHECK (tipo IN (N'LIGACAO',N'MENSAGEM',N'DOCUMENTACAO',N'OUTRO'))"
+    ]
+  },
+  {
+    "tabela": "visitas",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_visitas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "imovel_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "imovel_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "agendada_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "agendada_em DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "situacao",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "situacao NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "virtual",
+        "tipo": "BIT",
+        "obrigatorio": true,
+        "definicao": "virtual BIT NOT NULL"
+      },
+      {
+        "nome": "km",
+        "tipo": "DECIMAL(10,2)",
+        "obrigatorio": true,
+        "definicao": "km DECIMAL(10,2) NOT NULL"
+      },
+      {
+        "nome": "observacoes",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "observacoes NVARCHAR(2000) NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_visitas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT FK_visitas_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id)",
+      "CONSTRAINT FK_visitas_interesse FOREIGN KEY (lead_id,imovel_id) REFERENCES dbo.interesses(lead_id,imovel_id)",
+      "CONSTRAINT CK_visitas_situacao CHECK (situacao IN (N'AGENDADA',N'REALIZADA',N'CANCELADA'))",
+      "CONSTRAINT CK_visitas_km CHECK (km>=0)"
+    ]
+  },
+  {
+    "tabela": "propostas",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_propostas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "imovel_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "imovel_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "valor",
+        "tipo": "DECIMAL(19,2)",
+        "obrigatorio": true,
+        "definicao": "valor DECIMAL(19,2) NOT NULL"
+      },
+      {
+        "nome": "situacao",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "situacao NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "criada_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "criada_em DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "observacoes",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "observacoes NVARCHAR(2000) NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_propostas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT FK_propostas_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id)",
+      "CONSTRAINT FK_propostas_interesse FOREIGN KEY (lead_id,imovel_id) REFERENCES dbo.interesses(lead_id,imovel_id)",
+      "CONSTRAINT CK_propostas_valor CHECK (valor>=0)",
+      "CONSTRAINT CK_propostas_situacao CHECK (situacao IN (N'PENDENTE',N'ACEITA',N'RECUSADA'))"
+    ]
+  },
+  {
+    "tabela": "ocorrencias",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_ocorrencias PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "categoria",
+        "tipo": "NVARCHAR(40)",
+        "obrigatorio": true,
+        "definicao": "categoria NVARCHAR(40) NOT NULL"
+      },
+      {
+        "nome": "descricao",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": true,
+        "definicao": "descricao NVARCHAR(2000) NOT NULL"
+      },
+      {
+        "nome": "acao",
+        "tipo": "NVARCHAR(2000)",
+        "obrigatorio": false,
+        "definicao": "acao NVARCHAR(2000) NULL"
+      },
+      {
+        "nome": "criada_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "criada_em DATETIME2(6) NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_ocorrencias_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT CK_ocorrencias_categoria CHECK (categoria IN (N'ATRASO_RETORNO',N'INFORMACAO_INCOMPLETA',N'VISITA_CANCELADA',N'FALHA_DOCUMENTACAO',N'OUTRO'))"
+    ]
+  },
+  {
+    "tabela": "historico_etapas",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_historico_etapas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "lead_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "lead_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "etapa_anterior",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": false,
+        "definicao": "etapa_anterior NVARCHAR(30) NULL"
+      },
+      {
+        "nome": "etapa_nova",
+        "tipo": "NVARCHAR(30)",
+        "obrigatorio": true,
+        "definicao": "etapa_nova NVARCHAR(30) NOT NULL"
+      },
+      {
+        "nome": "alterada_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "alterada_em DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "autor_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "autor_id BIGINT NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_historico_etapas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE",
+      "CONSTRAINT FK_historico_etapas_autor_id FOREIGN KEY (autor_id) REFERENCES dbo.usuarios(id)"
+    ]
+  },
+  {
+    "tabela": "tokens_recuperacao",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "id BIGINT NOT NULL CONSTRAINT PK_tokens_recuperacao PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids"
+      },
+      {
+        "nome": "usuario_id",
+        "tipo": "BIGINT",
+        "obrigatorio": true,
+        "definicao": "usuario_id BIGINT NOT NULL"
+      },
+      {
+        "nome": "token_hash",
+        "tipo": "NVARCHAR(64)",
+        "obrigatorio": true,
+        "definicao": "token_hash NVARCHAR(64) NOT NULL"
+      },
+      {
+        "nome": "expira_em",
+        "tipo": "DATETIME2(6)",
+        "obrigatorio": true,
+        "definicao": "expira_em DATETIME2(6) NOT NULL"
+      },
+      {
+        "nome": "usado",
+        "tipo": "BIT",
+        "obrigatorio": true,
+        "definicao": "usado BIT NOT NULL"
+      }
+    ],
+    "restricoes": [
+      "CONSTRAINT FK_tokens_recuperacao_usuario_id FOREIGN KEY (usuario_id) REFERENCES dbo.usuarios(id)",
+      "CONSTRAINT UQ_tokens_recuperacao_token_hash UNIQUE (token_hash)"
+    ]
+  }
+]

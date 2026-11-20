@@ -1,0 +1,165 @@
+{
+  "notacao": "Entidade-relacionamento conceitual, brModelo",
+  "arquivo": "DER_Nexus.svg",
+  "entidades": [
+    "usuarios",
+    "tokens_recuperacao",
+    "imoveis",
+    "leads",
+    "historico_etapas",
+    "interesses",
+    "atividades",
+    "ocorrencias",
+    "propostas",
+    "visitas"
+  ],
+  "atributos": {
+    "usuarios": [
+      "id",
+      "nome",
+      "email",
+      "perfil"
+    ],
+    "tokens_recuperacao": [
+      "id",
+      "token_hash",
+      "expira_em"
+    ],
+    "imoveis": [
+      "id",
+      "titulo",
+      "valor",
+      "situacao"
+    ],
+    "leads": [
+      "id",
+      "nome",
+      "telefone",
+      "etapa"
+    ],
+    "historico_etapas": [
+      "id",
+      "etapa_anterior",
+      "etapa_nova",
+      "alterada_em"
+    ],
+    "interesses": [
+      "id",
+      "criado_em"
+    ],
+    "atividades": [
+      "id",
+      "titulo",
+      "prazo",
+      "concluida_em"
+    ],
+    "ocorrencias": [
+      "id",
+      "categoria",
+      "criada_em"
+    ],
+    "propostas": [
+      "id",
+      "valor",
+      "situacao"
+    ],
+    "visitas": [
+      "id",
+      "agendada_em",
+      "virtual",
+      "km"
+    ]
+  },
+  "relacoes": [
+    {
+      "origem": "usuarios",
+      "destino": "leads",
+      "relacionamento": "responde por",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "usuarios",
+      "destino": "imoveis",
+      "relacionamento": "cadastra",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "leads",
+      "destino": "interesses",
+      "relacionamento": "manifesta",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "imoveis",
+      "destino": "interesses",
+      "relacionamento": "recebe",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "leads",
+      "destino": "atividades",
+      "relacionamento": "possui",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "leads",
+      "destino": "ocorrencias",
+      "relacionamento": "registra",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "interesses",
+      "destino": "visitas",
+      "relacionamento": "vincula",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "interesses",
+      "destino": "propostas",
+      "relacionamento": "vincula",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "usuarios",
+      "destino": "leads",
+      "relacionamento": "atualiza",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "usuarios",
+      "destino": "tokens_recuperacao",
+      "relacionamento": "gera",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "usuarios",
+      "destino": "historico_etapas",
+      "relacionamento": "é autor",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    },
+    {
+      "origem": "leads",
+      "destino": "historico_etapas",
+      "relacionamento": "registra",
+      "cardinalidade_origem": "(0,N)",
+      "cardinalidade_destino": "(1,1)"
+    }
+  ],
+  "observacao": "Os atributos principais aparecem no desenho; o dicionário de dados contém todos os campos. As visitas e propostas referenciam o par único do interesse por chaves estrangeiras compostas.",
+  "formato": "A4 vertical",
+  "dimensoesDesenho": {
+    "largura": 1000,
+    "altura": 930
+  }
+}

@@ -1,0 +1,12 @@
+DOCUMENTACAO ACADEMICA DO NEXUS
+
+Para instalar e executar, comece pelo README.md na raiz do projeto.
+O roteiro completo de Java, SQL Server e HeidiSQL esta em:
+../docs/Instalacao_Windows_HeidiSQL.md
+
+Relatorio_Nexus.docx e Relatorio_Nexus.pdf: relatorio academico.
+Nexus_Estatistica.xlsx: analises estatisticas.
+Guia_Nexus.md e ../docs/Guia_do_Codigo.md: explicacao do codigo.
+
+O executavel corrigido ja esta em ../dist/nexus.jar.
+Os instaladores e conferencias para HeidiSQL estao em ../database/heidisql/.

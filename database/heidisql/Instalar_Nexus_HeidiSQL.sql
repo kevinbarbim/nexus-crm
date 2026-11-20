@@ -1,0 +1,913 @@
+-- Nexus 0.3.1: instalacao inicial para HeidiSQL conectado ao Microsoft SQL Server.
+-- Abra este arquivo em uma aba Consulta/Query e execute com F9.
+-- Antes, ative "Parar em erros / Stop on errors in batch mode" na barra do HeidiSQL.
+-- Use apenas se o esquema Nexus ainda nao foi instalado. Nao executa DROP DATABASE.
+-- Inclui estrutura, objetos SQL e dados de demonstracao (60 atendimentos e 20 imoveis).
+-- Nao execute tambem os scripts originais 01 a 06: este arquivo ja os incorpora.
+-- O delimitador !! e um comando do cliente HeidiSQL; nao e sintaxe T-SQL.
+
+DELIMITER !!
+-- Nexus. Instale por 00_instalar.sql em modo SQLCMD, com parada em erro.
+-- Instalação não destrutiva: execute em uma base nova.
+IF DB_ID(N'NexoImob') IS NULL CREATE DATABASE NexoImob;
+!!
+
+USE NexoImob;
+!!
+
+IF OBJECT_ID(N'dbo.usuarios',N'U') IS NOT NULL THROW 51000, 'A base já contém o projeto. Use uma base nova ou migrações.', 1;
+!!
+
+CREATE SEQUENCE dbo.seq_ids AS BIGINT START WITH 1 INCREMENT BY 1;
+!!
+
+CREATE TABLE dbo.usuarios(
+    id BIGINT NOT NULL CONSTRAINT PK_usuarios PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    nome NVARCHAR(120) NOT NULL,
+    email NVARCHAR(180) NOT NULL,
+    senha_hash NVARCHAR(100) NOT NULL,
+    perfil NVARCHAR(20) NOT NULL,
+    ativo BIT NOT NULL,
+    CONSTRAINT UQ_usuarios_email UNIQUE (email),
+    CONSTRAINT CK_usuarios_perfil CHECK (perfil IN (N'ADMIN',N'CORRETOR'))
+);
+!!
+
+CREATE TABLE dbo.leads(
+    id BIGINT NOT NULL CONSTRAINT PK_leads PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    nome NVARCHAR(120) NOT NULL,
+    email NVARCHAR(180) NULL,
+    telefone NVARCHAR(30) NOT NULL,
+    origem NVARCHAR(30) NOT NULL,
+    etapa NVARCHAR(30) NOT NULL,
+    orcamento DECIMAL(19,2) NOT NULL,
+    observacoes NVARCHAR(2000) NULL,
+    motivo_perda NVARCHAR(200) NULL,
+    criado_em DATETIME2(6) NOT NULL,
+    primeiro_contato_em DATETIME2(6) NULL,
+    encerrado_em DATETIME2(6) NULL,
+    responsavel_id BIGINT NOT NULL,
+    atualizado_por_id BIGINT NOT NULL,
+    CONSTRAINT CK_leads_origem CHECK (origem IN (N'INDICACAO',N'PORTAL',N'REDES_SOCIAIS',N'SITE',N'OUTRO')),
+    CONSTRAINT CK_leads_etapa CHECK (etapa IN (N'NOVO',N'CONTATADO',N'QUALIFICADO',N'VISITA',N'PROPOSTA',N'GANHO',N'PERDIDO')),
+    CONSTRAINT CK_leads_orcamento CHECK (orcamento>=0),
+    CONSTRAINT FK_leads_responsavel_id FOREIGN KEY (responsavel_id) REFERENCES dbo.usuarios(id),
+    CONSTRAINT FK_leads_atualizado_por_id FOREIGN KEY (atualizado_por_id) REFERENCES dbo.usuarios(id),
+    CONSTRAINT CK_leads_datas CHECK ((primeiro_contato_em IS NULL OR primeiro_contato_em>=criado_em) AND (encerrado_em IS NULL OR encerrado_em>=criado_em)),
+    CONSTRAINT CK_leads_perda CHECK (etapa<>N'PERDIDO' OR (motivo_perda IS NOT NULL AND motivo_perda IN(N'ORCAMENTO',N'SEM_RETORNO',N'IMOVEL_INADEQUADO',N'DOCUMENTACAO',N'OUTRO'))),
+    CONSTRAINT CK_leads_fechamento CHECK ((etapa IN(N'GANHO',N'PERDIDO') AND encerrado_em IS NOT NULL) OR (etapa NOT IN(N'GANHO',N'PERDIDO') AND encerrado_em IS NULL))
+);
+!!
+
+CREATE TABLE dbo.imoveis(
+    id BIGINT NOT NULL CONSTRAINT PK_imoveis PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    titulo NVARCHAR(160) NOT NULL,
+    tipo NVARCHAR(30) NOT NULL,
+    finalidade NVARCHAR(20) NOT NULL,
+    cidade NVARCHAR(100) NOT NULL,
+    bairro NVARCHAR(100) NOT NULL,
+    quartos INT NOT NULL,
+    area DECIMAL(12,2) NOT NULL,
+    valor DECIMAL(19,2) NOT NULL,
+    situacao NVARCHAR(30) NOT NULL,
+    descricao NVARCHAR(2000) NULL,
+    criado_por_id BIGINT NOT NULL,
+    CONSTRAINT CK_imoveis_tipo CHECK (tipo IN (N'CASA',N'APARTAMENTO',N'TERRENO',N'COMERCIAL')),
+    CONSTRAINT CK_imoveis_finalidade CHECK (finalidade IN (N'VENDA',N'LOCACAO')),
+    CONSTRAINT CK_imoveis_quartos CHECK (quartos>=0),
+    CONSTRAINT CK_imoveis_area CHECK (area>=0),
+    CONSTRAINT CK_imoveis_valor CHECK (valor>=0),
+    CONSTRAINT CK_imoveis_situacao CHECK (situacao IN (N'DISPONIVEL',N'RESERVADO',N'NEGOCIADO',N'INATIVO')),
+    CONSTRAINT FK_imoveis_criado_por_id FOREIGN KEY (criado_por_id) REFERENCES dbo.usuarios(id)
+);
+!!
+
+CREATE TABLE dbo.interesses(
+    id BIGINT NOT NULL CONSTRAINT PK_interesses PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    imovel_id BIGINT NOT NULL,
+    criado_em DATETIME2(6) NOT NULL,
+    CONSTRAINT FK_interesses_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT FK_interesses_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id),
+    CONSTRAINT UQ_interesses_lead_imovel UNIQUE(lead_id,imovel_id)
+);
+!!
+
+CREATE TABLE dbo.atividades(
+    id BIGINT NOT NULL CONSTRAINT PK_atividades PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    titulo NVARCHAR(160) NOT NULL,
+    tipo NVARCHAR(30) NOT NULL,
+    prazo DATETIME2(6) NOT NULL,
+    concluida_em DATETIME2(6) NULL,
+    observacoes NVARCHAR(2000) NULL,
+    CONSTRAINT FK_atividades_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT CK_atividades_tipo CHECK (tipo IN (N'LIGACAO',N'MENSAGEM',N'DOCUMENTACAO',N'OUTRO'))
+);
+!!
+
+CREATE TABLE dbo.visitas(
+    id BIGINT NOT NULL CONSTRAINT PK_visitas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    imovel_id BIGINT NOT NULL,
+    agendada_em DATETIME2(6) NOT NULL,
+    situacao NVARCHAR(30) NOT NULL,
+    virtual BIT NOT NULL,
+    km DECIMAL(10,2) NOT NULL,
+    observacoes NVARCHAR(2000) NULL,
+    CONSTRAINT FK_visitas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT FK_visitas_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id),
+    CONSTRAINT FK_visitas_interesse FOREIGN KEY (lead_id,imovel_id) REFERENCES dbo.interesses(lead_id,imovel_id),
+    CONSTRAINT CK_visitas_situacao CHECK (situacao IN (N'AGENDADA',N'REALIZADA',N'CANCELADA')),
+    CONSTRAINT CK_visitas_km CHECK (km>=0)
+);
+!!
+
+CREATE TABLE dbo.propostas(
+    id BIGINT NOT NULL CONSTRAINT PK_propostas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    imovel_id BIGINT NOT NULL,
+    valor DECIMAL(19,2) NOT NULL,
+    situacao NVARCHAR(30) NOT NULL,
+    criada_em DATETIME2(6) NOT NULL,
+    observacoes NVARCHAR(2000) NULL,
+    CONSTRAINT FK_propostas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT FK_propostas_imovel_id FOREIGN KEY (imovel_id) REFERENCES dbo.imoveis(id),
+    CONSTRAINT FK_propostas_interesse FOREIGN KEY (lead_id,imovel_id) REFERENCES dbo.interesses(lead_id,imovel_id),
+    CONSTRAINT CK_propostas_valor CHECK (valor>=0),
+    CONSTRAINT CK_propostas_situacao CHECK (situacao IN (N'PENDENTE',N'ACEITA',N'RECUSADA'))
+);
+!!
+
+CREATE TABLE dbo.ocorrencias(
+    id BIGINT NOT NULL CONSTRAINT PK_ocorrencias PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    categoria NVARCHAR(40) NOT NULL,
+    descricao NVARCHAR(2000) NOT NULL,
+    acao NVARCHAR(2000) NULL,
+    criada_em DATETIME2(6) NOT NULL,
+    CONSTRAINT FK_ocorrencias_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT CK_ocorrencias_categoria CHECK (categoria IN (N'ATRASO_RETORNO',N'INFORMACAO_INCOMPLETA',N'VISITA_CANCELADA',N'FALHA_DOCUMENTACAO',N'OUTRO'))
+);
+!!
+
+CREATE TABLE dbo.historico_etapas(
+    id BIGINT NOT NULL CONSTRAINT PK_historico_etapas PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    lead_id BIGINT NOT NULL,
+    etapa_anterior NVARCHAR(30) NULL,
+    etapa_nova NVARCHAR(30) NOT NULL,
+    alterada_em DATETIME2(6) NOT NULL,
+    autor_id BIGINT NOT NULL,
+    CONSTRAINT FK_historico_etapas_lead_id FOREIGN KEY (lead_id) REFERENCES dbo.leads(id) ON DELETE CASCADE,
+    CONSTRAINT FK_historico_etapas_autor_id FOREIGN KEY (autor_id) REFERENCES dbo.usuarios(id)
+);
+!!
+
+CREATE TABLE dbo.tokens_recuperacao(
+    id BIGINT NOT NULL CONSTRAINT PK_tokens_recuperacao PRIMARY KEY DEFAULT NEXT VALUE FOR dbo.seq_ids,
+    usuario_id BIGINT NOT NULL,
+    token_hash NVARCHAR(64) NOT NULL,
+    expira_em DATETIME2(6) NOT NULL,
+    usado BIT NOT NULL,
+    CONSTRAINT FK_tokens_recuperacao_usuario_id FOREIGN KEY (usuario_id) REFERENCES dbo.usuarios(id),
+    CONSTRAINT UQ_tokens_recuperacao_token_hash UNIQUE (token_hash)
+);
+!!
+
+CREATE INDEX IX_leads_responsavel_etapa ON dbo.leads(responsavel_id,etapa) INCLUDE(criado_em,primeiro_contato_em,encerrado_em);
+CREATE INDEX IX_visitas_lead_data ON dbo.visitas(lead_id,agendada_em) INCLUDE(situacao,virtual,km);
+CREATE INDEX IX_atividades_lead_prazo ON dbo.atividades(lead_id,prazo) INCLUDE(concluida_em);
+CREATE INDEX IX_propostas_lead ON dbo.propostas(lead_id,situacao);
+CREATE UNIQUE INDEX UQ_proposta_aceita_lead ON dbo.propostas(lead_id) WHERE situacao=N'ACEITA';
+CREATE UNIQUE INDEX UQ_proposta_aceita_imovel ON dbo.propostas(imovel_id) WHERE situacao=N'ACEITA';
+!!
+
+USE NexoImob;
+!!
+
+-- 1. Retorno escalar: horas corridas até o primeiro contato.
+CREATE OR ALTER FUNCTION dbo.fn_tempo_primeiro_contato(@lead_id BIGINT)
+RETURNS DECIMAL(18,4)
+AS
+BEGIN
+    DECLARE @horas DECIMAL(18,4);
+    SELECT @horas=CAST(DATEDIFF_BIG(SECOND,criado_em,primeiro_contato_em)/3600.0 AS DECIMAL(18,4))
+    FROM dbo.leads WHERE id=@lead_id AND primeiro_contato_em IS NOT NULL;
+    RETURN @horas;
+END;
+!!
+
+-- 2. Retorno TABLE inline. Limite superior exclusivo.
+CREATE OR ALTER FUNCTION dbo.fn_leads_periodo(@inicio DATETIME2,@fim DATETIME2,@responsavel BIGINT)
+RETURNS TABLE
+AS RETURN (
+    SELECT l.id,l.responsavel_id,l.origem,l.etapa,l.criado_em,l.encerrado_em,
+           dbo.fn_tempo_primeiro_contato(l.id) AS horas_contato
+    FROM dbo.leads l
+    WHERE l.criado_em>=@inicio AND l.criado_em<@fim
+      AND (@responsavel IS NULL OR l.responsavel_id=@responsavel)
+);
+!!
+
+-- 3. Retorno por variável TABLE, preenchida por mais de uma instrução.
+CREATE OR ALTER FUNCTION dbo.fn_resumo_corretor(@responsavel BIGINT)
+RETURNS @resumo TABLE(responsavel_id BIGINT,corretor NVARCHAR(120),total_leads INT,ganhos INT,perdas INT,conversao_encerrados DECIMAL(9,4),media_horas_contato DECIMAL(18,4))
+AS
+BEGIN
+    INSERT INTO @resumo
+    SELECT u.id,u.nome,COUNT(l.id),
+      SUM(CASE WHEN l.etapa=N'GANHO' THEN 1 ELSE 0 END),
+      SUM(CASE WHEN l.etapa=N'PERDIDO' THEN 1 ELSE 0 END),NULL,
+      AVG(dbo.fn_tempo_primeiro_contato(l.id))
+    FROM dbo.usuarios u LEFT JOIN dbo.leads l ON l.responsavel_id=u.id
+    WHERE (@responsavel IS NULL OR u.id=@responsavel)
+    GROUP BY u.id,u.nome;
+    UPDATE @resumo SET conversao_encerrados=CAST(ganhos*1.0/NULLIF(ganhos+perdas,0) AS DECIMAL(9,4));
+    RETURN;
+END;
+!!
+
+USE NexoImob;
+!!
+
+CREATE OR ALTER VIEW dbo.vw_funil_corretor AS
+SELECT u.id AS responsavel_id,u.nome AS corretor,l.etapa,COUNT_BIG(*) AS quantidade,
+       SUM(l.orcamento) AS orcamento_total,AVG(dbo.fn_tempo_primeiro_contato(l.id)) AS media_horas_contato,
+       AVG(CASE WHEN l.encerrado_em IS NOT NULL THEN DATEDIFF_BIG(SECOND,l.criado_em,l.encerrado_em)/86400.0 END) AS media_dias_encerramento
+FROM dbo.leads l JOIN dbo.usuarios u ON u.id=l.responsavel_id
+GROUP BY u.id,u.nome,l.etapa;
+!!
+
+CREATE OR ALTER VIEW dbo.vw_pareto_perdas AS
+WITH frequencias AS (
+    SELECT motivo_perda,COUNT_BIG(*) AS quantidade FROM dbo.leads WHERE etapa=N'PERDIDO' GROUP BY motivo_perda
+)
+SELECT motivo_perda,quantidade,
+    CAST(100.0*quantidade/NULLIF(SUM(quantidade) OVER(),0) AS DECIMAL(9,4)) AS percentual,
+    CAST(100.0*SUM(quantidade) OVER(ORDER BY quantidade DESC,motivo_perda ROWS UNBOUNDED PRECEDING)/NULLIF(SUM(quantidade) OVER(),0) AS DECIMAL(9,4)) AS percentual_acumulado
+FROM frequencias;
+!!
+
+CREATE OR ALTER VIEW dbo.vw_visitas_ambiental AS
+WITH visitas_por_lead AS (
+  SELECT lead_id,COUNT_BIG(*) AS realizadas,SUM(CASE WHEN virtual=1 THEN 1 ELSE 0 END) AS virtuais,SUM(km) AS km_realizados
+  FROM dbo.visitas WHERE situacao=N'REALIZADA' GROUP BY lead_id
+), qualidade AS (
+  SELECT lead_id,COUNT_BIG(*) AS ocorrencias FROM dbo.ocorrencias GROUP BY lead_id
+)
+SELECT l.id AS lead_id,l.responsavel_id,u.nome AS corretor,l.etapa,
+       ISNULL(v.realizadas,0) AS visitas_realizadas,ISNULL(v.virtuais,0) AS visitas_virtuais,
+       ISNULL(v.km_realizados,0) AS km_realizados,ISNULL(q.ocorrencias,0) AS ocorrencias,
+       CAST(100.0*ISNULL(v.virtuais,0)/NULLIF(v.realizadas,0) AS DECIMAL(9,4)) AS percentual_virtual
+FROM dbo.leads l JOIN dbo.usuarios u ON u.id=l.responsavel_id
+LEFT JOIN visitas_por_lead v ON v.lead_id=l.id LEFT JOIN qualidade q ON q.lead_id=l.id;
+!!
+
+USE NexoImob;
+!!
+
+-- Processa conjuntos, inclusive INSERT/UPDATE de várias linhas.
+CREATE OR ALTER TRIGGER dbo.trg_leads_historico ON dbo.leads AFTER INSERT,UPDATE,DELETE AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Atendimento encerrado preserva a etapa e não pode ser excluído.
+    IF EXISTS(SELECT 1 FROM deleted d LEFT JOIN inserted i ON i.id=d.id
+              WHERE d.etapa IN(N'GANHO',N'PERDIDO') AND (i.id IS NULL OR i.etapa<>d.etapa))
+        THROW 51007,'Atendimento encerrado não pode ser reaberto ou excluído.',1;
+    IF EXISTS(SELECT 1 FROM inserted i LEFT JOIN dbo.propostas p ON p.lead_id=i.id AND p.situacao=N'ACEITA' WHERE i.etapa=N'GANHO' AND p.id IS NULL)
+        THROW 51001,'Lead ganho exige proposta aceita.',1;
+    INSERT dbo.historico_etapas(lead_id,etapa_anterior,etapa_nova,alterada_em,autor_id)
+    SELECT i.id,d.etapa,i.etapa,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time'),i.atualizado_por_id
+    FROM inserted i LEFT JOIN deleted d ON d.id=i.id WHERE d.id IS NULL OR i.etapa<>d.etapa;
+END;
+!!
+
+CREATE OR ALTER TRIGGER dbo.trg_propostas_integridade ON dbo.propostas AFTER INSERT,UPDATE,DELETE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS(SELECT 1 FROM inserted i LEFT JOIN dbo.interesses x ON x.lead_id=i.lead_id AND x.imovel_id=i.imovel_id WHERE x.id IS NULL)
+        THROW 51002,'Proposta exige imóvel vinculado aos interesses do lead.',1;
+    IF EXISTS(SELECT 1 FROM deleted d LEFT JOIN inserted i ON i.id=d.id
+              WHERE d.situacao=N'ACEITA' AND (i.id IS NULL OR i.situacao<>d.situacao
+                OR i.valor<>d.valor OR i.lead_id<>d.lead_id OR i.imovel_id<>d.imovel_id
+                OR i.criada_em<>d.criada_em OR ISNULL(i.observacoes,N'')<>ISNULL(d.observacoes,N'')))
+        THROW 51003,'Proposta aceita não pode ser alterada ou excluída.',1;
+    IF EXISTS(SELECT 1 FROM deleted d JOIN dbo.leads l ON l.id=d.lead_id WHERE l.etapa IN(N'GANHO',N'PERDIDO'))
+        THROW 51008,'Proposta de atendimento encerrado não pode ser alterada ou excluída.',1;
+    IF EXISTS(SELECT 1 FROM inserted i LEFT JOIN deleted d ON d.id=i.id JOIN dbo.imoveis m ON m.id=i.imovel_id
+              WHERE i.situacao=N'ACEITA' AND (d.id IS NULL OR d.situacao<>N'ACEITA') AND m.situacao NOT IN(N'DISPONIVEL',N'RESERVADO'))
+        THROW 51004,'Imóvel indisponível para aceitar proposta.',1;
+END;
+!!
+
+CREATE OR ALTER TRIGGER dbo.trg_visitas_validacao ON dbo.visitas AFTER INSERT,UPDATE,DELETE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS(SELECT 1 FROM deleted d JOIN dbo.leads l ON l.id=d.lead_id WHERE l.etapa IN(N'GANHO',N'PERDIDO'))
+        THROW 51009,'Visita de atendimento encerrado não pode ser alterada ou excluída.',1;
+    IF EXISTS(SELECT 1 FROM inserted i JOIN dbo.leads l ON l.id=i.lead_id WHERE l.etapa IN(N'GANHO',N'PERDIDO'))
+        THROW 51016,'Agende a visita em um atendimento aberto.',1;
+    IF EXISTS(SELECT 1 FROM inserted WHERE virtual=1 AND km<>0) THROW 51005,'Visita virtual deve registrar zero quilômetros.',1;
+    IF EXISTS(SELECT 1 FROM inserted i LEFT JOIN dbo.interesses x ON x.lead_id=i.lead_id AND x.imovel_id=i.imovel_id WHERE x.id IS NULL)
+        THROW 51006,'Visita exige imóvel vinculado aos interesses do lead.',1;
+END;
+!!
+
+USE NexoImob;
+!!
+
+CREATE OR ALTER PROCEDURE dbo.sp_mover_lead @lead_id BIGINT,@etapa NVARCHAR(30),@motivo NVARCHAR(200),@autor BIGINT AS
+BEGIN
+    SET NOCOUNT ON; SET XACT_ABORT ON;
+    BEGIN TRY
+      BEGIN TRANSACTION;
+      DECLARE @responsavel BIGINT,@atual NVARCHAR(30),@perfil NVARCHAR(20),@ativo BIT;
+      SELECT @responsavel=responsavel_id,@atual=etapa FROM dbo.leads WITH(UPDLOCK,HOLDLOCK) WHERE id=@lead_id;
+      SELECT @perfil=perfil,@ativo=ativo FROM dbo.usuarios WHERE id=@autor;
+      IF @atual IS NULL THROW 51010,'Lead não encontrado.',1;
+      IF ISNULL(@ativo,0)=0 OR (@perfil<>N'ADMIN' AND @responsavel<>@autor) THROW 51011,'Operação não autorizada.',1;
+      IF @atual IN(N'GANHO',N'PERDIDO') THROW 51012,'Atendimento já encerrado.',1;
+      IF @etapa=N'GANHO' THROW 51013,'Use o aceite de proposta para registrar ganho.',1;
+      IF @etapa NOT IN(N'NOVO',N'CONTATADO',N'QUALIFICADO',N'VISITA',N'PROPOSTA',N'PERDIDO') THROW 51014,'Etapa inválida.',1;
+      IF @etapa=N'PERDIDO' AND (@motivo IS NULL OR @motivo NOT IN(N'ORCAMENTO',N'SEM_RETORNO',N'IMOVEL_INADEQUADO',N'DOCUMENTACAO',N'OUTRO'))
+          THROW 51015,'Selecione um motivo de perda válido.',1;
+      DECLARE @agora DATETIME2=CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time');
+      UPDATE dbo.leads SET etapa=@etapa,atualizado_por_id=@autor,
+        primeiro_contato_em=CASE WHEN @etapa<>N'NOVO' THEN COALESCE(primeiro_contato_em,@agora) ELSE primeiro_contato_em END,
+        motivo_perda=CASE WHEN @etapa=N'PERDIDO' THEN @motivo ELSE NULL END,
+        encerrado_em=CASE WHEN @etapa=N'PERDIDO' THEN @agora ELSE NULL END WHERE id=@lead_id;
+      COMMIT;
+    END TRY
+    BEGIN CATCH
+      IF @@TRANCOUNT>0 ROLLBACK;
+      THROW;
+    END CATCH;
+END;
+!!
+
+CREATE OR ALTER PROCEDURE dbo.sp_agendar_visita @lead_id BIGINT,@imovel_id BIGINT,@data DATETIME2,@situacao NVARCHAR(30),@virtual BIT,@km DECIMAL(10,2),@observacoes NVARCHAR(2000),@autor BIGINT AS
+BEGIN
+    SET NOCOUNT ON; SET XACT_ABORT ON;
+    BEGIN TRY
+      BEGIN TRANSACTION;
+      DECLARE @responsavel BIGINT,@etapa NVARCHAR(30),@perfil NVARCHAR(20),@ativo BIT;
+      SELECT @responsavel=responsavel_id,@etapa=etapa FROM dbo.leads WITH(UPDLOCK,HOLDLOCK) WHERE id=@lead_id;
+      SELECT @perfil=perfil,@ativo=ativo FROM dbo.usuarios WHERE id=@autor;
+      IF @etapa IS NULL THROW 51020,'Lead não encontrado.',1;
+      IF ISNULL(@ativo,0)=0 OR (@perfil<>N'ADMIN' AND @responsavel<>@autor) THROW 51021,'Operação não autorizada.',1;
+      IF @etapa IN(N'GANHO',N'PERDIDO') THROW 51022,'Atendimento já encerrado.',1;
+      IF NOT EXISTS(SELECT 1 FROM dbo.imoveis WITH(UPDLOCK,HOLDLOCK) WHERE id=@imovel_id AND situacao IN(N'DISPONIVEL',N'RESERVADO')) THROW 51023,'Imóvel indisponível.',1;
+      IF NOT EXISTS(SELECT 1 FROM dbo.interesses WHERE lead_id=@lead_id AND imovel_id=@imovel_id) THROW 51024,'Registre o interesse primeiro.',1;
+      DECLARE @id BIGINT=NEXT VALUE FOR dbo.seq_ids;
+      INSERT dbo.visitas(id,lead_id,imovel_id,agendada_em,situacao,virtual,km,observacoes)
+      VALUES(@id,@lead_id,@imovel_id,@data,@situacao,@virtual,@km,@observacoes);
+      COMMIT; SELECT @id AS id;
+    END TRY
+    BEGIN CATCH
+      IF @@TRANCOUNT>0 ROLLBACK;
+      THROW;
+    END CATCH;
+END;
+!!
+
+CREATE OR ALTER PROCEDURE dbo.sp_aceitar_proposta @proposta_id BIGINT,@autor BIGINT AS
+BEGIN
+    SET NOCOUNT ON; SET XACT_ABORT ON;
+    BEGIN TRY
+      BEGIN TRANSACTION;
+      DECLARE @lead BIGINT,@imovel BIGINT,@situacao NVARCHAR(30),@responsavel BIGINT,@etapa NVARCHAR(30),@perfil NVARCHAR(20),@ativo BIT;
+      SELECT @lead=lead_id,@imovel=imovel_id,@situacao=situacao FROM dbo.propostas WITH(UPDLOCK,HOLDLOCK) WHERE id=@proposta_id;
+      SELECT @responsavel=responsavel_id,@etapa=etapa FROM dbo.leads WITH(UPDLOCK,HOLDLOCK) WHERE id=@lead;
+      SELECT @perfil=perfil,@ativo=ativo FROM dbo.usuarios WHERE id=@autor;
+      IF @situacao IS NULL THROW 51030,'Proposta não encontrada.',1;
+      IF ISNULL(@ativo,0)=0 OR (@perfil<>N'ADMIN' AND @responsavel<>@autor) THROW 51031,'Operação não autorizada.',1;
+      IF @situacao<>N'PENDENTE' OR @etapa IN(N'GANHO',N'PERDIDO') THROW 51032,'Proposta ou atendimento já encerrado.',1;
+      IF NOT EXISTS(SELECT 1 FROM dbo.imoveis WITH(UPDLOCK,HOLDLOCK) WHERE id=@imovel AND situacao IN(N'DISPONIVEL',N'RESERVADO')) THROW 51033,'Imóvel indisponível.',1;
+      IF EXISTS(SELECT 1 FROM dbo.propostas WHERE situacao=N'ACEITA' AND (lead_id=@lead OR imovel_id=@imovel)) THROW 51034,'Já existe uma proposta aceita.',1;
+      DECLARE @agora DATETIME2=CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time');
+      UPDATE dbo.propostas SET situacao=N'ACEITA' WHERE id=@proposta_id;
+      UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@imovel;
+      UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em=COALESCE(primeiro_contato_em,@agora),encerrado_em=@agora,motivo_perda=NULL,atualizado_por_id=@autor WHERE id=@lead;
+      COMMIT;
+    END TRY
+    BEGIN CATCH
+      IF @@TRANCOUNT>0 ROLLBACK;
+      THROW;
+    END CATCH;
+END;
+!!
+
+-- Carga inicial: usuários, carteira de imóveis e 60 atendimentos.
+-- Execute após 01–05, antes de iniciar o Java, em uma base vazia.
+-- Logins: admin@example.test, ana@example.test, bruno@example.test. Senha: NexoDemo2026!
+USE NexoImob;
+!!
+
+SET XACT_ABORT ON;
+BEGIN TRY
+BEGIN TRANSACTION;
+IF EXISTS(SELECT 1 FROM dbo.usuarios) OR EXISTS(SELECT 1 FROM dbo.leads) OR EXISTS(SELECT 1 FROM dbo.imoveis) THROW 51100,'Dados já presentes. Execute a carga inicial em uma base vazia.',1;
+DECLARE @admin BIGINT=NEXT VALUE FOR dbo.seq_ids;
+DECLARE @ana BIGINT=NEXT VALUE FOR dbo.seq_ids;
+DECLARE @bruno BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.usuarios(id,nome,email,senha_hash,perfil,ativo) VALUES(@admin,N'Gabriel Almeida',N'admin@example.test',N'$2b$10$v.tvAN3dVqNjq3KzMAewNeTIW5hwQExQ6wbg3xFxfRumAAw0vpmkK',N'ADMIN',1);
+INSERT dbo.usuarios(id,nome,email,senha_hash,perfil,ativo) VALUES(@ana,N'Ana Carolina Martins',N'ana@example.test',N'$2b$10$v.tvAN3dVqNjq3KzMAewNeTIW5hwQExQ6wbg3xFxfRumAAw0vpmkK',N'CORRETOR',1);
+INSERT dbo.usuarios(id,nome,email,senha_hash,perfil,ativo) VALUES(@bruno,N'Bruno Henrique Lopes',N'bruno@example.test',N'$2b$10$v.tvAN3dVqNjq3KzMAewNeTIW5hwQExQ6wbg3xFxfRumAAw0vpmkK',N'CORRETOR',1);
+DECLARE @m1 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m1,N'Casa térrea no Jardim Urano',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim Urano',3,70,268000,N'DISPONIVEL',N'Casa térrea com sala integrada, três dormitórios e área de serviço. Espaço nos fundos para organizar uma área de convivência.',@bruno);
+DECLARE @m2 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m2,N'Apartamento na Vila Imperial',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Vila Imperial',2,75,286000,N'DISPONIVEL',N'Apartamento com dois dormitórios, sala de jantar e cozinha planejada. Uma vaga de garagem e acesso por elevador.',@ana);
+DECLARE @m3 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m3,N'Casa com quintal na Boa Vista',N'CASA',N'VENDA',N'São José do Rio Preto',N'Boa Vista',2,80,304000,N'DISPONIVEL',N'Casa com dois dormitórios, cozinha independente e quintal. Próxima de comércio e serviços do bairro.',@bruno);
+DECLARE @m4 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m4,N'Apartamento no Centro',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Centro',2,85,322000,N'DISPONIVEL',N'Apartamento com dois dormitórios, sala ampla e varanda. Localização central, com acesso a mercados e transporte.',@ana);
+DECLARE @m5 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m5,N'Casa no Jardim Simões',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim Simões',3,90,340000,N'DISPONIVEL',N'Casa com três dormitórios e área de serviço coberta. Garagem na frente e quintal com espaço para churrasqueira.',@bruno);
+DECLARE @m6 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m6,N'Apartamento na Redentora',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Redentora',2,95,358000,N'DISPONIVEL',N'Apartamento com dois dormitórios, um deles suíte, e sala com varanda. Condomínio com portaria e elevador.',@ana);
+DECLARE @m7 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m7,N'Casa com varanda no Bom Jardim',N'CASA',N'VENDA',N'São José do Rio Preto',N'Bom Jardim',3,100,376000,N'DISPONIVEL',N'Casa com três dormitórios, sala e varanda. Quintal ao fundo e garagem coberta.',@bruno);
+DECLARE @m8 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m8,N'Apartamento no Higienópolis',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Higienópolis',3,105,394000,N'DISPONIVEL',N'Apartamento com três dormitórios, cozinha independente e área de serviço. Sala com boa iluminação natural.',@ana);
+DECLARE @m9 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m9,N'Casa térrea no Jardim Maracanã',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim Maracanã',3,110,412000,N'DISPONIVEL',N'Casa térrea com três dormitórios, sala de estar e cozinha integrada. Área externa com espaço para receber a família.',@bruno);
+DECLARE @m10 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m10,N'Apartamento na Vila Maceno',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Vila Maceno',2,115,430000,N'DISPONIVEL',N'Apartamento com dois dormitórios e sala ampliada. Cozinha com armários e uma vaga de garagem.',@ana);
+DECLARE @m11 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m11,N'Casa no Parque Estoril',N'CASA',N'VENDA',N'São José do Rio Preto',N'Parque Estoril',3,120,448000,N'DISPONIVEL',N'Casa com três dormitórios, suíte e sala de jantar. Quintal com varanda e área de serviço separada.',@bruno);
+DECLARE @m12 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m12,N'Apartamento no Jardim Vivendas',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Jardim Vivendas',3,125,466000,N'DISPONIVEL',N'Apartamento com três dormitórios, uma suíte e varanda. Duas vagas de garagem e acesso por elevador.',@ana);
+DECLARE @m13 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m13,N'Casa no Jardim das Oliveiras',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim das Oliveiras',2,130,484000,N'DISPONIVEL',N'Casa com dois dormitórios, sala ampla e cozinha planejada. Quintal com área coberta para convivência.',@bruno);
+DECLARE @m14 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m14,N'Apartamento no Jardim Europa',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Jardim Europa',2,135,502000,N'DISPONIVEL',N'Apartamento com dois dormitórios e sala integrada à varanda. Cozinha com armários e área de serviço ventilada.',@ana);
+DECLARE @m15 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m15,N'Casa com quintal na Vila São Jorge',N'CASA',N'VENDA',N'São José do Rio Preto',N'Vila São Jorge',3,140,520000,N'DISPONIVEL',N'Casa com três dormitórios, uma suíte e quintal. Garagem coberta e acesso lateral para a área de serviço.',@bruno);
+DECLARE @m16 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m16,N'Apartamento na Vila Diniz',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Vila Diniz',2,145,538000,N'DISPONIVEL',N'Apartamento com dois dormitórios, suíte e sala de jantar. Varanda com espaço para mesa e duas vagas de garagem.',@ana);
+DECLARE @m17 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m17,N'Casa no Jardim América',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim América',3,150,556000,N'DISPONIVEL',N'Casa com três dormitórios, duas salas e área de lazer nos fundos. Cozinha independente e garagem coberta.',@bruno);
+DECLARE @m18 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m18,N'Apartamento na Redentora com sacada',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Redentora',3,155,574000,N'DISPONIVEL',N'Apartamento com três dormitórios e sacada. Suíte, lavabo e cozinha planejada, com duas vagas de garagem.',@ana);
+DECLARE @m19 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m19,N'Casa no Jardim Fuscaldo',N'CASA',N'VENDA',N'São José do Rio Preto',N'Jardim Fuscaldo',3,160,592000,N'DISPONIVEL',N'Casa com três dormitórios, suíte e sala integrada. Quintal com varanda e espaço para uma área de lazer.',@bruno);
+DECLARE @m20 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.imoveis(id,titulo,tipo,finalidade,cidade,bairro,quartos,area,valor,situacao,descricao,criado_por_id) VALUES(@m20,N'Apartamento no Centro com suíte',N'APARTAMENTO',N'VENDA',N'São José do Rio Preto',N'Centro',3,165,610000,N'DISPONIVEL',N'Apartamento com três dormitórios, suíte e sala de jantar. Varanda e duas vagas de garagem.',@ana);
+DECLARE @l1 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l1,N'Marina Teixeira Pereira',N'marina.teixeira.pereira@clientes.nexoimob.local',N'17967700739',N'INDICACAO',N'NOVO',268000,N'Interesse em casa na região de Jardim Urano. Prioriza boa iluminação natural. Tem disponibilidade para visitas no fim da tarde.','2026-07-01T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l1,@m1,'2026-07-01T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l1,@m1,'2026-07-03T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l1,@m1,'2026-07-04T09:00:00',N'REALIZADA',0,13.60);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l1,@m1,'2026-07-05T09:00:00',N'REALIZADA',0,13.60);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l1,@m1,'2026-07-06T09:00:00',N'REALIZADA',0,13.59);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l1,@m1,268000,N'ACEITA','2026-07-08T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m1;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-01T16:13:12',encerrado_em='2026-07-23T23:24:00',motivo_perda=NULL WHERE id=@l1;
+DECLARE @l2 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l2,N'Marcelo Carvalho Moreira',N'marcelo.carvalho.moreira@clientes.nexoimob.local',N'17911571102',N'PORTAL',N'NOVO',599000,N'Interesse em apartamento na região de Vila Imperial. Prioriza acesso fácil ao comércio. Pediu retorno no horário de almoço.','2026-07-02T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l2,@m2,'2026-07-02T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l2,@m2,'2026-07-04T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l2,@m2,'2026-07-05T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l2,@m2,286000,N'ACEITA','2026-07-09T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m2;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-03T08:10:48',encerrado_em='2026-07-18T00:50:24',motivo_perda=NULL WHERE id=@l2;
+DECLARE @l3 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l3,N'Bruna Santos Teixeira',N'bruna.santos.teixeira@clientes.nexoimob.local',N'17947562124',N'REDES_SOCIAIS',N'NOVO',473000,N'Interesse em apartamento na região de Vila Diniz. Prioriza cozinha com armários. Pode agendar visitas aos sábados.','2026-07-03T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l3,@m16,'2026-07-03T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l3,@m16,'2026-07-05T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l3,@m16,'2026-07-06T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l3,@m16,'2026-07-07T09:00:00',N'REALIZADA',0,12.49);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l3,@m16,'2026-07-08T09:00:00',N'REALIZADA',0,12.49);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-03T12:11:24',encerrado_em='2026-07-22T19:04:48',motivo_perda=N'DOCUMENTACAO' WHERE id=@l3;
+DECLARE @l4 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l4,N'Fernanda Duarte Andrade',N'fernanda.duarte.andrade@clientes.nexoimob.local',N'17996240513',N'SITE',N'NOVO',595000,N'Interesse em casa na região de Jardim América. Prioriza área de serviço separada. Solicitou uma relação dos documentos necessários.','2026-07-04T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l4,@m17,'2026-07-04T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l4,@m17,'2026-07-06T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-05T08:57:36',encerrado_em='2026-07-14T06:21:36',motivo_perda=N'ORCAMENTO' WHERE id=@l4;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l4,N'ATRASO_RETORNO',N'Documentação complementar não foi solicitada no prazo combinado.',N'Enviar a relação de documentos e combinar um prazo de retorno.','2026-07-05T09:00:00');
+DECLARE @l5 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l5,N'Eduardo Souza Cardoso',N'eduardo.souza.cardoso@clientes.nexoimob.local',N'17965407527',N'OUTRO',N'NOVO',682000,N'Interesse em apartamento na região de Redentora. Prioriza acesso por elevador. Prefere receber as opções por mensagem.','2026-07-05T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l5,@m18,'2026-07-05T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l5,@m18,'2026-07-07T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l5,@m18,'2026-07-08T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l5,@m18,'2026-07-09T09:00:00',N'REALIZADA',0,9.56);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l5,@m18,'2026-07-10T09:00:00',N'REALIZADA',0,9.56);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-05T21:00:00',encerrado_em='2026-07-25T05:52:48',motivo_perda=N'SEM_RETORNO' WHERE id=@l5;
+DECLARE @l6 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l6,N'Natália Dias Teixeira',N'natalia.dias.teixeira@clientes.nexoimob.local',N'17966718932',N'INDICACAO',N'NOVO',772000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza espaço para receber a família. Tem disponibilidade para visitas no fim da tarde.','2026-07-06T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l6,@m19,'2026-07-06T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l6;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l6,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l7 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l7,N'Daniel Santos Machado',N'daniel.santos.machado@clientes.nexoimob.local',N'17983856383',N'PORTAL',N'NOVO',312000,N'Interesse em apartamento na região de Centro. Prioriza vaga de garagem coberta. Pediu retorno no horário de almoço.','2026-07-07T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l7,@m20,'2026-07-07T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-07-07T21:49:12',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l7;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l7,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l8 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l8,N'Antonio Carlos Freitas Fernandes',N'antonio.carlos.freitas.fernandes@clientes.nexoimob.local',N'17965064990',N'REDES_SOCIAIS',N'NOVO',302000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza boa iluminação natural. Pode agendar visitas aos sábados.','2026-07-08T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l8,@m13,'2026-07-08T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-07-08T17:35:24',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l8;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l8,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l8,N'ATRASO_RETORNO',N'Orçamento atualizado aguardou conferência antes do envio de novas opções.',N'Revisar o orçamento e enviar opções compatíveis.','2026-07-09T09:00:00');
+DECLARE @l9 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l9,N'Jéssica Mendes Nascimento',N'jessica.mendes.nascimento@clientes.nexoimob.local',N'17942548507',N'SITE',N'NOVO',892000,N'Interesse em apartamento na região de Jardim Europa. Prioriza acesso fácil ao comércio. Solicitou uma relação dos documentos necessários.','2026-07-09T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l9,@m14,'2026-07-09T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l9,@m14,'2026-07-11T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l9,@m14,'2026-07-12T09:00:00',N'REALIZADA',0,26.03);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l9,@m14,'2026-07-13T09:00:00',N'REALIZADA',0,26.03);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-07-10T01:03:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l9;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l9,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l10 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l10,N'Débora Campos Martins',N'debora.campos.martins@clientes.nexoimob.local',N'17946042597',N'OUTRO',N'NOVO',289000,N'Interesse em casa na região de Vila São Jorge. Prioriza cozinha com armários. Prefere receber as opções por mensagem.','2026-07-10T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l10,@m15,'2026-07-10T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l10,@m15,'2026-07-12T09:00:00',N'REALIZADA',0,11.86);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l10,@m15,'2026-07-13T09:00:00',N'REALIZADA',0,11.86);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l10,@m15,'2026-07-14T09:00:00',N'REALIZADA',0,11.85);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l10,@m15,520000,N'PENDENTE','2026-07-17T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-07-10T13:19:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l10;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l10,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l11 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l11,N'Isabela Lopes Batista',N'isabela.lopes.batista@clientes.nexoimob.local',N'17914118402',N'INDICACAO',N'NOVO',899000,N'Interesse em casa na região de Boa Vista. Prioriza área de serviço separada. Tem disponibilidade para visitas no fim da tarde.','2026-07-11T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l11,@m3,'2026-07-11T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l11,@m3,'2026-07-13T09:00:00',N'REALIZADA',0,18.42);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l11,@m3,'2026-07-14T09:00:00',N'REALIZADA',0,18.42);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l11,@m3,'2026-07-15T09:00:00',N'REALIZADA',0,18.42);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l11,@m3,'2026-07-16T09:00:00',N'REALIZADA',0,18.42);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l11,@m3,304000,N'ACEITA','2026-07-18T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m3;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-11T09:42:36',encerrado_em='2026-08-11T08:02:24',motivo_perda=NULL WHERE id=@l11;
+DECLARE @l12 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l12,N'Guilherme Souza Dias',N'guilherme.souza.dias@clientes.nexoimob.local',N'17940341680',N'PORTAL',N'NOVO',366000,N'Interesse em apartamento na região de Centro. Prioriza acesso por elevador. Pediu retorno no horário de almoço.','2026-07-12T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l12,@m4,'2026-07-12T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l12,@m4,'2026-07-14T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l12,@m4,322000,N'ACEITA','2026-07-19T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m4;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-12T11:16:12',encerrado_em='2026-07-20T00:21:36',motivo_perda=NULL WHERE id=@l12;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l12,N'ATRASO_RETORNO',N'Cliente aguardou a confirmação do horário da visita.',N'Confirmar a disponibilidade do imóvel e reagendar a visita.','2026-07-13T09:00:00');
+DECLARE @l13 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l13,N'Marcos Lopes Barbosa',N'marcos.lopes.barbosa@clientes.nexoimob.local',N'17910201845',N'REDES_SOCIAIS',N'NOVO',547000,N'Interesse em apartamento na região de Redentora. Prioriza espaço para receber a família. Pode agendar visitas aos sábados.','2026-07-13T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l13,@m18,'2026-07-13T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l13,@m18,'2026-07-15T09:00:00',N'REALIZADA',0,13.98);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l13,@m18,'2026-07-16T09:00:00',N'REALIZADA',0,13.98);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l13,@m18,'2026-07-17T09:00:00',N'REALIZADA',0,13.98);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l13,@m18,'2026-07-18T09:00:00',N'REALIZADA',0,13.97);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-14T01:47:24',encerrado_em='2026-08-11T09:43:12',motivo_perda=N'SEM_RETORNO' WHERE id=@l13;
+DECLARE @l14 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l14,N'Beatriz Freitas Dias',N'beatriz.freitas.dias@clientes.nexoimob.local',N'17986683861',N'SITE',N'NOVO',454000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza vaga de garagem coberta. Solicitou uma relação dos documentos necessários.','2026-07-14T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l14,@m19,'2026-07-14T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l14,@m19,'2026-07-16T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l14,@m19,'2026-07-17T09:00:00',N'REALIZADA',0,17.31);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l14,@m19,'2026-07-18T09:00:00',N'REALIZADA',0,17.31);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-14T12:02:24',encerrado_em='2026-07-29T23:24:00',motivo_perda=N'IMOVEL_INADEQUADO' WHERE id=@l14;
+DECLARE @l15 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l15,N'Sandra Souza Castro',N'sandra.souza.castro@clientes.nexoimob.local',N'17999695855',N'OUTRO',N'NOVO',658000,N'Interesse em apartamento na região de Centro. Prioriza boa iluminação natural. Prefere receber as opções por mensagem.','2026-07-15T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l15,@m20,'2026-07-15T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l15,@m20,'2026-07-17T09:00:00',N'REALIZADA',0,13.32);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-16T02:39:36',encerrado_em='2026-07-26T01:19:12',motivo_perda=N'DOCUMENTACAO' WHERE id=@l15;
+DECLARE @l16 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l16,N'Letícia Souza Barbosa',N'leticia.souza.barbosa@clientes.nexoimob.local',N'17979638964',N'INDICACAO',N'NOVO',704000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza acesso fácil ao comércio. Tem disponibilidade para visitas no fim da tarde.','2026-07-16T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l16,@m13,'2026-07-16T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l16;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l16,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l16,N'ATRASO_RETORNO',N'Retorno sobre o financiamento ficou pendente após o primeiro atendimento.',N'Confirmar a análise de crédito e retornar ao cliente.','2026-07-17T09:00:00');
+DECLARE @l17 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l17,N'Luciana Fernandes Gomes',N'luciana.fernandes.gomes@clientes.nexoimob.local',N'17963232318',N'PORTAL',N'NOVO',303000,N'Interesse em apartamento na região de Jardim Europa. Prioriza cozinha com armários. Pediu retorno no horário de almoço.','2026-07-17T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l17,@m14,'2026-07-17T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-07-17T14:49:12',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l17;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l17,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l18 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l18,N'André Costa Vieira',N'andre.costa.vieira@clientes.nexoimob.local',N'17928943747',N'REDES_SOCIAIS',N'NOVO',221000,N'Interesse em casa na região de Vila São Jorge. Prioriza área de serviço separada. Pode agendar visitas aos sábados.','2026-07-18T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l18,@m15,'2026-07-18T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-07-18T21:54:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l18;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l18,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l19 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l19,N'José Roberto Lima Andrade',N'jose.roberto.lima.andrade@clientes.nexoimob.local',N'17914860938',N'SITE',N'NOVO',282000,N'Interesse em apartamento na região de Vila Diniz. Prioriza acesso por elevador. Solicitou uma relação dos documentos necessários.','2026-07-19T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l19,@m16,'2026-07-19T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l19,@m16,'2026-07-21T09:00:00',N'REALIZADA',0,8.78);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-07-20T02:27:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l19;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l19,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l20 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l20,N'Thiago Andrade Santana',N'thiago.andrade.santana@clientes.nexoimob.local',N'17984533443',N'OUTRO',N'NOVO',558000,N'Interesse em casa na região de Jardim América. Prioriza espaço para receber a família. Prefere receber as opções por mensagem.','2026-07-20T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l20,@m17,'2026-07-20T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l20,@m17,'2026-07-22T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l20,@m17,556000,N'PENDENTE','2026-07-27T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-07-20T09:36:00',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l20;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l20,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l20,N'ATRASO_RETORNO',N'Mensagem do cliente ficou sem resposta no acompanhamento.',N'Retomar o contato e registrar o próximo passo.','2026-07-21T09:00:00');
+DECLARE @l21 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l21,N'Gabriela Pereira Silva',N'gabriela.pereira.silva@clientes.nexoimob.local',N'17924488671',N'INDICACAO',N'NOVO',603000,N'Interesse em casa na região de Jardim Simões. Prioriza vaga de garagem coberta. Tem disponibilidade para visitas no fim da tarde.','2026-07-21T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l21,@m5,'2026-07-21T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l21,@m5,'2026-07-23T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l21,@m5,'2026-07-24T09:00:00',N'REALIZADA',0,10.95);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l21,@m5,'2026-07-25T09:00:00',N'REALIZADA',0,10.94);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l21,@m5,340000,N'ACEITA','2026-07-28T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m5;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-22T01:53:24',encerrado_em='2026-08-20T01:48:00',motivo_perda=NULL WHERE id=@l21;
+DECLARE @l22 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l22,N'Carla Almeida Dias',N'carla.almeida.dias@clientes.nexoimob.local',N'17928741493',N'PORTAL',N'NOVO',700000,N'Interesse em apartamento na região de Redentora. Prioriza boa iluminação natural. Pediu retorno no horário de almoço.','2026-07-22T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l22,@m6,'2026-07-22T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l22,@m6,'2026-07-24T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l22,@m6,'2026-07-25T09:00:00',N'REALIZADA',0,21.65);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l22,@m6,358000,N'ACEITA','2026-07-29T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m6;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-07-23T05:22:48',encerrado_em='2026-08-16T22:26:24',motivo_perda=NULL WHERE id=@l22;
+DECLARE @l23 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l23,N'Juliana Moura Almeida',N'juliana.moura.almeida@clientes.nexoimob.local',N'17931162521',N'REDES_SOCIAIS',N'NOVO',833000,N'Interesse em apartamento na região de Centro. Prioriza acesso fácil ao comércio. Pode agendar visitas aos sábados.','2026-07-23T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l23,@m20,'2026-07-23T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l23,@m20,'2026-07-25T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l23,@m20,'2026-07-26T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-24T02:51:36',encerrado_em='2026-08-13T12:50:24',motivo_perda=N'DOCUMENTACAO' WHERE id=@l23;
+DECLARE @l24 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l24,N'Larissa Ramos Barbosa',N'larissa.ramos.barbosa@clientes.nexoimob.local',N'17990892251',N'SITE',N'NOVO',461000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza cozinha com armários. Solicitou uma relação dos documentos necessários.','2026-07-24T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l24,@m13,'2026-07-24T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l24,@m13,'2026-07-26T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l24,@m13,'2026-07-27T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-24T20:10:12',encerrado_em='2026-08-08T22:12:00',motivo_perda=N'ORCAMENTO' WHERE id=@l24;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l24,N'ATRASO_RETORNO',N'Documentação complementar não foi solicitada no prazo combinado.',N'Enviar a relação de documentos e combinar um prazo de retorno.','2026-07-25T09:00:00');
+DECLARE @l25 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l25,N'Camila Santana Gomes',N'camila.santana.gomes@clientes.nexoimob.local',N'17970949356',N'OUTRO',N'NOVO',184000,N'Interesse em apartamento na região de Jardim Europa. Prioriza área de serviço separada. Prefere receber as opções por mensagem.','2026-07-25T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l25,@m14,'2026-07-25T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l25,@m14,'2026-07-27T09:00:00',N'REALIZADA',0,18.76);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l25,@m14,'2026-07-28T09:00:00',N'REALIZADA',0,18.76);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l25,@m14,'2026-07-29T09:00:00',N'REALIZADA',0,18.75);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-07-26T06:32:24',encerrado_em='2026-08-12T00:50:24',motivo_perda=N'SEM_RETORNO' WHERE id=@l25;
+DECLARE @l26 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l26,N'Ricardo Oliveira Rocha',N'ricardo.oliveira.rocha@clientes.nexoimob.local',N'17977763439',N'INDICACAO',N'NOVO',422000,N'Interesse em casa na região de Vila São Jorge. Prioriza acesso por elevador. Tem disponibilidade para visitas no fim da tarde.','2026-07-26T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l26,@m15,'2026-07-26T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l26;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l26,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l27 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l27,N'Aline Nascimento Castro',N'aline.nascimento.castro@clientes.nexoimob.local',N'17929362468',N'PORTAL',N'NOVO',366000,N'Interesse em apartamento na região de Vila Diniz. Prioriza espaço para receber a família. Pediu retorno no horário de almoço.','2026-07-27T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l27,@m16,'2026-07-27T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-07-27T23:58:12',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l27;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l27,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l28 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l28,N'Rodrigo Souza Vieira',N'rodrigo.souza.vieira@clientes.nexoimob.local',N'17936046424',N'REDES_SOCIAIS',N'NOVO',658000,N'Interesse em casa na região de Jardim América. Prioriza vaga de garagem coberta. Pode agendar visitas aos sábados.','2026-07-28T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l28,@m17,'2026-07-28T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-07-29T01:55:12',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l28;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l28,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l28,N'ATRASO_RETORNO',N'Orçamento atualizado aguardou conferência antes do envio de novas opções.',N'Revisar o orçamento e enviar opções compatíveis.','2026-07-29T09:00:00');
+DECLARE @l29 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l29,N'Roberta Santos Pereira',N'roberta.santos.pereira@clientes.nexoimob.local',N'17936999873',N'SITE',N'NOVO',802000,N'Interesse em apartamento na região de Redentora. Prioriza boa iluminação natural. Solicitou uma relação dos documentos necessários.','2026-07-29T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l29,@m18,'2026-07-29T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l29,@m18,'2026-07-31T09:00:00',N'REALIZADA',0,12.87);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l29,@m18,'2026-08-01T09:00:00',N'REALIZADA',0,12.86);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-07-29T10:52:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l29;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l29,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l30 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l30,N'Fernando Batista Mendes',N'fernando.batista.mendes@clientes.nexoimob.local',N'17957232661',N'OUTRO',N'NOVO',666000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza acesso fácil ao comércio. Prefere receber as opções por mensagem.','2026-07-30T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l30,@m19,'2026-07-30T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l30,@m19,'2026-08-01T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l30,@m19,'2026-08-02T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l30,@m19,'2026-08-03T09:00:00',N'REALIZADA',0,26.25);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l30,@m19,'2026-08-04T09:00:00',N'REALIZADA',0,26.24);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l30,@m19,592000,N'PENDENTE','2026-08-06T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-07-30T17:04:12',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l30;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l30,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l31 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l31,N'Ana Paula Pereira Rodrigues',N'ana.paula.pereira.rodrigues@clientes.nexoimob.local',N'17925969016',N'INDICACAO',N'NOVO',781000,N'Interesse em casa na região de Bom Jardim. Prioriza cozinha com armários. Tem disponibilidade para visitas no fim da tarde.','2026-07-31T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l31,@m7,'2026-07-31T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l31,@m7,'2026-08-02T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l31,@m7,'2026-08-03T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l31,@m7,'2026-08-04T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l31,@m7,'2026-08-05T09:00:00',N'REALIZADA',0,22.30);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l31,@m7,376000,N'ACEITA','2026-08-07T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m7;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-01T02:51:00',encerrado_em='2026-08-20T00:21:36',motivo_perda=NULL WHERE id=@l31;
+DECLARE @l32 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l32,N'Elisa Gomes Lima',N'elisa.gomes.lima@clientes.nexoimob.local',N'17965386023',N'PORTAL',N'NOVO',820000,N'Interesse em apartamento na região de Higienópolis. Prioriza área de serviço separada. Pediu retorno no horário de almoço.','2026-08-01T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l32,@m8,'2026-08-01T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l32,@m8,'2026-08-03T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l32,@m8,'2026-08-04T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l32,@m8,'2026-08-05T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l32,@m8,'2026-08-06T09:00:00',N'REALIZADA',0,23.44);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l32,@m8,394000,N'ACEITA','2026-08-08T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m8;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-02T02:21:00',encerrado_em='2026-08-29T11:52:48',motivo_perda=NULL WHERE id=@l32;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l32,N'ATRASO_RETORNO',N'Cliente aguardou a confirmação do horário da visita.',N'Confirmar a disponibilidade do imóvel e reagendar a visita.','2026-08-02T09:00:00');
+DECLARE @l33 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l33,N'Lucas Vieira Souza',N'lucas.vieira.souza@clientes.nexoimob.local',N'17952487883',N'REDES_SOCIAIS',N'NOVO',427000,N'Interesse em apartamento na região de Jardim Europa. Prioriza acesso por elevador. Pode agendar visitas aos sábados.','2026-08-02T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l33,@m14,'2026-08-02T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l33,@m14,'2026-08-04T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l33,@m14,'2026-08-05T09:00:00',N'REALIZADA',0,21.02);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l33,@m14,'2026-08-06T09:00:00',N'REALIZADA',0,21.02);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-02T14:16:48',encerrado_em='2026-08-27T05:52:48',motivo_perda=N'SEM_RETORNO' WHERE id=@l33;
+DECLARE @l34 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l34,N'Patrícia Ramos Nogueira',N'patricia.ramos.nogueira@clientes.nexoimob.local',N'17911324543',N'SITE',N'NOVO',266000,N'Interesse em casa na região de Vila São Jorge. Prioriza espaço para receber a família. Solicitou uma relação dos documentos necessários.','2026-08-03T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l34,@m15,'2026-08-03T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l34,@m15,'2026-08-05T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l34,@m15,'2026-08-06T09:00:00',N'REALIZADA',0,10.72);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-04T05:23:24',encerrado_em='2026-08-20T08:02:24',motivo_perda=N'IMOVEL_INADEQUADO' WHERE id=@l34;
+DECLARE @l35 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l35,N'Cláudia Fernandes Rodrigues',N'claudia.fernandes.rodrigues@clientes.nexoimob.local',N'17958766731',N'OUTRO',N'NOVO',745000,N'Interesse em apartamento na região de Vila Diniz. Prioriza vaga de garagem coberta. Prefere receber as opções por mensagem.','2026-08-04T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l35,@m16,'2026-08-04T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l35,@m16,'2026-08-06T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l35,@m16,'2026-08-07T09:00:00',N'REALIZADA',0,13.30);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l35,@m16,'2026-08-08T09:00:00',N'REALIZADA',0,13.30);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l35,@m16,'2026-08-09T09:00:00',N'REALIZADA',0,13.29);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-05T05:10:48',encerrado_em='2026-09-06T09:43:12',motivo_perda=N'DOCUMENTACAO' WHERE id=@l35;
+DECLARE @l36 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l36,N'Mariana Andrade Lima',N'mariana.andrade.lima@clientes.nexoimob.local',N'17982722764',N'INDICACAO',N'NOVO',293000,N'Interesse em casa na região de Jardim América. Prioriza boa iluminação natural. Tem disponibilidade para visitas no fim da tarde.','2026-08-05T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l36,@m17,'2026-08-05T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l36;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l36,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l36,N'ATRASO_RETORNO',N'Retorno sobre o financiamento ficou pendente após o primeiro atendimento.',N'Confirmar a análise de crédito e retornar ao cliente.','2026-08-06T09:00:00');
+DECLARE @l37 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l37,N'Gustavo Rocha Barbosa',N'gustavo.rocha.barbosa@clientes.nexoimob.local',N'17921652709',N'PORTAL',N'NOVO',630000,N'Interesse em apartamento na região de Redentora. Prioriza acesso fácil ao comércio. Pediu retorno no horário de almoço.','2026-08-06T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l37,@m18,'2026-08-06T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-08-07T08:06:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l37;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l37,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l38 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l38,N'Paula Lima Moreira',N'paula.lima.moreira@clientes.nexoimob.local',N'17981753101',N'REDES_SOCIAIS',N'NOVO',400000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza cozinha com armários. Pode agendar visitas aos sábados.','2026-08-07T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l38,@m19,'2026-08-07T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-08-08T08:19:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l38;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l38,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l39 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l39,N'Eliane Freitas Moura',N'eliane.freitas.moura@clientes.nexoimob.local',N'17945446559',N'SITE',N'NOVO',347000,N'Interesse em apartamento na região de Centro. Prioriza área de serviço separada. Solicitou uma relação dos documentos necessários.','2026-08-08T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l39,@m20,'2026-08-08T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l39,@m20,'2026-08-10T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l39,@m20,'2026-08-11T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l39,@m20,'2026-08-12T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-08-08T19:03:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l39;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l39,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l40 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l40,N'João Pedro Santana Vieira',N'joao.pedro.santana.vieira@clientes.nexoimob.local',N'17916580031',N'OUTRO',N'NOVO',648000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza acesso por elevador. Prefere receber as opções por mensagem.','2026-08-09T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l40,@m13,'2026-08-09T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l40,@m13,'2026-08-11T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l40,@m13,'2026-08-12T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l40,@m13,'2026-08-13T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l40,@m13,'2026-08-14T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l40,@m13,484000,N'PENDENTE','2026-08-16T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-08-09T18:46:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l40;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l40,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l40,N'ATRASO_RETORNO',N'Mensagem do cliente ficou sem resposta no acompanhamento.',N'Retomar o contato e registrar o próximo passo.','2026-08-10T09:00:00');
+DECLARE @l41 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l41,N'Leonardo Nogueira Lima',N'leonardo.nogueira.lima@clientes.nexoimob.local',N'17962005647',N'INDICACAO',N'NOVO',835000,N'Interesse em casa na região de Jardim Maracanã. Prioriza espaço para receber a família. Tem disponibilidade para visitas no fim da tarde.','2026-08-10T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l41,@m9,'2026-08-10T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l41,@m9,'2026-08-12T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l41,@m9,'2026-08-13T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l41,@m9,'2026-08-14T09:00:00',N'REALIZADA',0,13.94);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l41,@m9,412000,N'ACEITA','2026-08-17T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m9;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-11T04:21:00',encerrado_em='2026-08-26T12:21:36',motivo_perda=NULL WHERE id=@l41;
+DECLARE @l42 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l42,N'Adriana Castro Ramos',N'adriana.castro.ramos@clientes.nexoimob.local',N'17914024428',N'PORTAL',N'NOVO',516000,N'Interesse em apartamento na região de Vila Maceno. Prioriza vaga de garagem coberta. Pediu retorno no horário de almoço.','2026-08-11T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l42,@m10,'2026-08-11T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l42,@m10,'2026-08-13T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l42,@m10,'2026-08-14T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l42,@m10,'2026-08-15T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l42,@m10,'2026-08-16T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l42,@m10,'2026-08-17T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l42,@m10,430000,N'ACEITA','2026-08-18T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m10;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-11T16:52:12',encerrado_em='2026-09-11T09:14:24',motivo_perda=NULL WHERE id=@l42;
+DECLARE @l43 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l43,N'Henrique Silva Machado',N'henrique.silva.machado@clientes.nexoimob.local',N'17930233327',N'REDES_SOCIAIS',N'NOVO',307000,N'Interesse em apartamento na região de Vila Diniz. Prioriza boa iluminação natural. Pode agendar visitas aos sábados.','2026-08-12T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l43,@m16,'2026-08-12T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l43,@m16,'2026-08-14T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l43,@m16,'2026-08-15T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l43,@m16,'2026-08-16T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l43,@m16,'2026-08-17T09:00:00',N'REALIZADA',0,25.53);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l43,@m16,'2026-08-18T09:00:00',N'REALIZADA',0,25.53);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-12T16:53:24',encerrado_em='2026-09-13T18:07:12',motivo_perda=N'DOCUMENTACAO' WHERE id=@l43;
+DECLARE @l44 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l44,N'Pedro Henrique Mendes Nogueira',N'pedro.henrique.mendes.nogueira@clientes.nexoimob.local',N'17971680530',N'SITE',N'NOVO',227000,N'Interesse em casa na região de Jardim América. Prioriza acesso fácil ao comércio. Solicitou uma relação dos documentos necessários.','2026-08-13T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l44,@m17,'2026-08-13T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l44,@m17,'2026-08-15T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l44,@m17,'2026-08-16T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l44,@m17,'2026-08-17T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l44,@m17,'2026-08-18T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-13T16:42:36',encerrado_em='2026-09-06T04:40:48',motivo_perda=N'ORCAMENTO' WHERE id=@l44;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l44,N'ATRASO_RETORNO',N'Documentação complementar não foi solicitada no prazo combinado.',N'Enviar a relação de documentos e combinar um prazo de retorno.','2026-08-14T09:00:00');
+DECLARE @l45 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l45,N'Carolina Andrade Almeida',N'carolina.andrade.almeida@clientes.nexoimob.local',N'17935326129',N'OUTRO',N'NOVO',712000,N'Interesse em apartamento na região de Redentora. Prioriza cozinha com armários. Prefere receber as opções por mensagem.','2026-08-14T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l45,@m18,'2026-08-14T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l45,@m18,'2026-08-16T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l45,@m18,'2026-08-17T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l45,@m18,'2026-08-18T09:00:00',N'REALIZADA',0,20.77);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-14T14:13:12',encerrado_em='2026-09-03T14:02:24',motivo_perda=N'SEM_RETORNO' WHERE id=@l45;
+DECLARE @l46 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l46,N'Cássia Ramos Almeida',N'cassia.ramos.almeida@clientes.nexoimob.local',N'17977485668',N'INDICACAO',N'NOVO',377000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza área de serviço separada. Tem disponibilidade para visitas no fim da tarde.','2026-08-15T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l46,@m19,'2026-08-15T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l46;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l46,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l47 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l47,N'Luiz Henrique Lopes Oliveira',N'luiz.henrique.lopes.oliveira@clientes.nexoimob.local',N'17983529883',N'PORTAL',N'NOVO',346000,N'Interesse em apartamento na região de Centro. Prioriza acesso por elevador. Pediu retorno no horário de almoço.','2026-08-16T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l47,@m20,'2026-08-16T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-08-16T13:03:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l47;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l47,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l48 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l48,N'Rafael Cardoso Rocha',N'rafael.cardoso.rocha@clientes.nexoimob.local',N'17925382969',N'REDES_SOCIAIS',N'NOVO',390000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza espaço para receber a família. Pode agendar visitas aos sábados.','2026-08-17T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l48,@m13,'2026-08-17T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-08-17T09:44:24',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l48;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l48,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l48,N'ATRASO_RETORNO',N'Orçamento atualizado aguardou conferência antes do envio de novas opções.',N'Revisar o orçamento e enviar opções compatíveis.','2026-08-18T09:00:00');
+DECLARE @l49 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l49,N'Vanessa Barbosa Vieira',N'vanessa.barbosa.vieira@clientes.nexoimob.local',N'17922178998',N'SITE',N'NOVO',513000,N'Interesse em apartamento na região de Jardim Europa. Prioriza vaga de garagem coberta. Solicitou uma relação dos documentos necessários.','2026-08-18T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l49,@m14,'2026-08-18T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l49,@m14,'2026-08-20T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l49,@m14,'2026-08-21T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l49,@m14,'2026-08-22T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l49,@m14,'2026-08-23T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-08-18T13:40:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l49;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l49,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l50 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l50,N'Fabiana Batista Teixeira',N'fabiana.batista.teixeira@clientes.nexoimob.local',N'17911400464',N'OUTRO',N'NOVO',578000,N'Interesse em casa na região de Vila São Jorge. Prioriza boa iluminação natural. Prefere receber as opções por mensagem.','2026-08-19T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l50,@m15,'2026-08-19T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l50,@m15,'2026-08-21T09:00:00',N'REALIZADA',0,20.26);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l50,@m15,520000,N'PENDENTE','2026-08-26T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-08-19T11:51:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l50;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l50,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l51 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l51,N'Flávia Santos Oliveira',N'flavia.santos.oliveira@clientes.nexoimob.local',N'17999459452',N'INDICACAO',N'NOVO',335000,N'Interesse em casa na região de Parque Estoril. Prioriza acesso fácil ao comércio. Tem disponibilidade para visitas no fim da tarde.','2026-08-20T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l51,@m11,'2026-08-20T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l51,@m11,'2026-08-22T09:00:00',N'REALIZADA',0,11.52);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l51,@m11,448000,N'ACEITA','2026-08-27T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m11;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-20T19:06:36',encerrado_em='2026-08-28T09:14:24',motivo_perda=NULL WHERE id=@l51;
+DECLARE @l52 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l52,N'Fábio Nascimento Oliveira',N'fabio.nascimento.oliveira@clientes.nexoimob.local',N'17925795092',N'PORTAL',N'NOVO',337000,N'Interesse em apartamento na região de Jardim Vivendas. Prioriza cozinha com armários. Pediu retorno no horário de almoço.','2026-08-21T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l52,@m12,'2026-08-21T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l52,@m12,'2026-08-23T09:00:00',N'REALIZADA',0,16.06);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l52,@m12,'2026-08-24T09:00:00',N'REALIZADA',0,16.06);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l52,@m12,'2026-08-25T09:00:00',N'REALIZADA',0,16.06);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l52,@m12,'2026-08-26T09:00:00',N'REALIZADA',0,16.04);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l52,@m12,466000,N'ACEITA','2026-08-28T09:00:00');
+UPDATE dbo.imoveis SET situacao=N'NEGOCIADO' WHERE id=@m12;
+UPDATE dbo.leads SET etapa=N'GANHO',primeiro_contato_em='2026-08-21T10:48:36',encerrado_em='2026-09-23T13:48:00',motivo_perda=NULL WHERE id=@l52;
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l52,N'ATRASO_RETORNO',N'Cliente aguardou a confirmação do horário da visita.',N'Confirmar a disponibilidade do imóvel e reagendar a visita.','2026-08-22T09:00:00');
+DECLARE @l53 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l53,N'Diego Cardoso Rocha',N'diego.cardoso.rocha@clientes.nexoimob.local',N'17921376560',N'REDES_SOCIAIS',N'NOVO',546000,N'Interesse em apartamento na região de Redentora. Prioriza área de serviço separada. Pode agendar visitas aos sábados.','2026-08-22T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l53,@m18,'2026-08-22T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l53,@m18,'2026-08-24T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l53,@m18,'2026-08-25T09:00:00',N'REALIZADA',0,13.69);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l53,@m18,'2026-08-26T09:00:00',N'REALIZADA',0,13.69);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l53,@m18,'2026-08-27T09:00:00',N'REALIZADA',0,13.70);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-22T10:43:12',encerrado_em='2026-09-23T23:52:48',motivo_perda=N'SEM_RETORNO' WHERE id=@l53;
+DECLARE @l54 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l54,N'Renata Dias Rocha',N'renata.dias.rocha@clientes.nexoimob.local',N'17952641165',N'SITE',N'NOVO',702000,N'Interesse em casa na região de Jardim Fuscaldo. Prioriza acesso por elevador. Solicitou uma relação dos documentos necessários.','2026-08-23T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l54,@m19,'2026-08-23T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l54,@m19,'2026-08-25T09:00:00',N'REALIZADA',0,23.42);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-23T11:01:12',encerrado_em='2026-09-10T06:07:12',motivo_perda=N'IMOVEL_INADEQUADO' WHERE id=@l54;
+DECLARE @l55 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l55,N'Mateus Santana Machado',N'mateus.santana.machado@clientes.nexoimob.local',N'17930128042',N'OUTRO',N'NOVO',613000,N'Interesse em apartamento na região de Centro. Prioriza espaço para receber a família. Prefere receber as opções por mensagem.','2026-08-24T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l55,@m20,'2026-08-24T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l55,@m20,'2026-08-26T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l55,@m20,'2026-08-27T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l55,@m20,'2026-08-28T09:00:00',N'REALIZADA',1,0);
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l55,@m20,'2026-08-29T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'PERDIDO',primeiro_contato_em='2026-08-24T21:16:12',encerrado_em='2026-09-26T13:19:12',motivo_perda=N'DOCUMENTACAO' WHERE id=@l55;
+DECLARE @l56 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l56,N'Amanda Gomes Campos',N'amanda.gomes.campos@clientes.nexoimob.local',N'17987043996',N'INDICACAO',N'NOVO',767000,N'Interesse em casa na região de Jardim das Oliveiras. Prioriza vaga de garagem coberta. Tem disponibilidade para visitas no fim da tarde.','2026-08-25T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l56,@m13,'2026-08-25T09:00:00');
+UPDATE dbo.leads SET etapa=N'NOVO',primeiro_contato_em=NULL,encerrado_em=NULL,motivo_perda=NULL WHERE id=@l56;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l56,N'Retornar sobre a preferência de imóvel',N'MENSAGEM',DATEADD(DAY,-1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l56,N'ATRASO_RETORNO',N'Retorno sobre o financiamento ficou pendente após o primeiro atendimento.',N'Confirmar a análise de crédito e retornar ao cliente.','2026-08-26T09:00:00');
+DECLARE @l57 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l57,N'Priscila Almeida Freitas',N'priscila.almeida.freitas@clientes.nexoimob.local',N'17956339411',N'PORTAL',N'NOVO',443000,N'Interesse em apartamento na região de Jardim Europa. Prioriza boa iluminação natural. Pediu retorno no horário de almoço.','2026-08-26T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l57,@m14,'2026-08-26T09:00:00');
+UPDATE dbo.leads SET etapa=N'CONTATADO',primeiro_contato_em='2026-08-26T23:34:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l57;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l57,N'Confirmar orçamento e prazo de compra',N'LIGACAO',DATEADD(DAY,0,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l58 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l58,N'Márcia Teixeira Carvalho',N'marcia.teixeira.carvalho@clientes.nexoimob.local',N'17941499506',N'REDES_SOCIAIS',N'NOVO',271000,N'Interesse em casa na região de Vila São Jorge. Prioriza acesso fácil ao comércio. Pode agendar visitas aos sábados.','2026-08-27T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l58,@m15,'2026-08-27T09:00:00');
+UPDATE dbo.leads SET etapa=N'QUALIFICADO',primeiro_contato_em='2026-08-27T11:39:36',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l58;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l58,N'Separar opções na região de interesse',N'OUTRO',DATEADD(DAY,1,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l59 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l59,N'Danilo Batista Souza',N'danilo.batista.souza@clientes.nexoimob.local',N'17939436929',N'SITE',N'NOVO',402000,N'Interesse em apartamento na região de Vila Diniz. Prioriza cozinha com armários. Solicitou uma relação dos documentos necessários.','2026-08-28T09:00:00',@ana,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l59,@m16,'2026-08-28T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l59,@m16,'2026-08-30T09:00:00',N'REALIZADA',1,0);
+UPDATE dbo.leads SET etapa=N'VISITA',primeiro_contato_em='2026-08-28T20:47:24',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l59;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l59,N'Confirmar horário da próxima visita',N'MENSAGEM',DATEADD(DAY,2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+DECLARE @l60 BIGINT=NEXT VALUE FOR dbo.seq_ids;
+INSERT dbo.leads(id,nome,email,telefone,origem,etapa,orcamento,observacoes,criado_em,responsavel_id,atualizado_por_id) VALUES(@l60,N'Felipe Martins Souza',N'felipe.martins.souza@clientes.nexoimob.local',N'17936356241',N'OUTRO',N'NOVO',659000,N'Interesse em casa na região de Jardim América. Prioriza área de serviço separada. Prefere receber as opções por mensagem.','2026-08-29T09:00:00',@bruno,@admin);
+INSERT dbo.interesses(lead_id,imovel_id,criado_em) VALUES(@l60,@m17,'2026-08-29T09:00:00');
+INSERT dbo.visitas(lead_id,imovel_id,agendada_em,situacao,virtual,km) VALUES(@l60,@m17,'2026-08-31T09:00:00',N'REALIZADA',0,23.30);
+INSERT dbo.propostas(lead_id,imovel_id,valor,situacao,criada_em) VALUES(@l60,@m17,556000,N'PENDENTE','2026-09-05T09:00:00');
+UPDATE dbo.leads SET etapa=N'PROPOSTA',primeiro_contato_em='2026-08-29T10:13:48',encerrado_em=NULL,motivo_perda=NULL WHERE id=@l60;
+INSERT dbo.atividades(lead_id,titulo,tipo,prazo) VALUES(@l60,N'Conferir documentos para a proposta',N'DOCUMENTACAO',DATEADD(DAY,-2,CONVERT(DATETIME2,SYSDATETIMEOFFSET() AT TIME ZONE 'E. South America Standard Time')));
+INSERT dbo.ocorrencias(lead_id,categoria,descricao,acao,criada_em) VALUES(@l60,N'ATRASO_RETORNO',N'Mensagem do cliente ficou sem resposta no acompanhamento.',N'Retomar o contato e registrar o próximo passo.','2026-08-30T09:00:00');
+COMMIT;
+END TRY
+BEGIN CATCH
+IF @@TRANCOUNT>0 ROLLBACK;
+THROW;
+END CATCH;
+!!
+
+SELECT 'Leads' AS conjunto,COUNT(*) AS quantidade FROM dbo.leads;
+SELECT SUM(km) AS km_realizados,COUNT(*) AS visitas,SUM(CONVERT(INT,virtual)) AS virtuais FROM dbo.visitas WHERE situacao=N'REALIZADA';
+!!
+
+SELECT DB_NAME() AS banco;
+SELECT COUNT(*) AS clientes FROM dbo.leads;
+SELECT COUNT(*) AS imoveis FROM dbo.imoveis;
+SELECT N'Instalacao inicial concluida.' AS resultado;
+!!
+
+SELECT N'Usuarios' AS conjunto, COUNT(*) AS quantidade FROM dbo.usuarios
+UNION ALL SELECT N'Atendimentos', COUNT(*) FROM dbo.leads
+UNION ALL SELECT N'Imoveis', COUNT(*) FROM dbo.imoveis;
+PRINT N'Instalacao concluida. Abra iniciar-sqlserver.bat e use a senha do banco.';
+!!
+DELIMITER ;

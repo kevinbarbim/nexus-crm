@@ -1,0 +1,17 @@
+erDiagram
+    USUARIOS ||--o{ LEADS : responsavel
+    USUARIOS ||--o{ LEADS : atualizado_por
+    USUARIOS ||--o{ IMOVEIS : cadastra
+    LEADS ||--o{ INTERESSES : possui
+    IMOVEIS ||--o{ INTERESSES : recebe
+    LEADS ||--o{ ATIVIDADES : acompanha
+    LEADS ||--o{ VISITAS : agenda
+    IMOVEIS ||--o{ VISITAS : visitado
+    LEADS ||--o{ PROPOSTAS : negocia
+    IMOVEIS ||--o{ PROPOSTAS : ofertado
+    LEADS ||--o{ OCORRENCIAS : registra
+    LEADS ||--o{ HISTORICO_ETAPAS : altera
+    USUARIOS ||--o{ HISTORICO_ETAPAS : autor
+    USUARIOS ||--o{ TOKENS_RECUPERACAO : recupera
+    INTERESSES ||--o{ VISITAS : "par vinculado"
+    INTERESSES ||--o{ PROPOSTAS : "par vinculado"
