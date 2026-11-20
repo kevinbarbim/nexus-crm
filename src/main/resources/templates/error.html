@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Confira a operação')}">
+</head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<th:block th:if="${actor!=null}">
+<aside th:replace="~{fragments::sidebar}">
+</aside>
+</th:block>
+<main th:style="${actor==null}?'margin-left:0':''">
+<th:block th:if="${actor!=null}"><header th:replace="~{fragments::barra}"></header></th:block>
+<div class="public-error-tools" th:if="${actor==null}"><button th:replace="~{fragments::tema}"></button></div>
+<section class="panel errorpanel">
+<div class="auth-symbol"><svg th:replace="~{fragments::icone('info')}"></svg></div>
+<div class="eyebrow">Confira os dados</div>
+<h1>Não foi possível concluir</h1>
+<p th:text="${message}">
+</p>
+<a class="btn secondary" th:href="${actor!=null}?@{/}:@{/login}">Voltar ao início</a>
+</section>
+</main>
+</body>
+</html>

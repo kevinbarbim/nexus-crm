@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Propostas')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Propostas <span class="page-count" th:text="${#lists.size(registros)}"></span></h1><p class="muted">Aceite uma proposta na ficha do cliente para concluir o negócio.</p></div>
+        <a class="btn" th:href="@{/propostas/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Nova proposta</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Lista de propostas">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Imóvel</th>
+                    <th scope="col" class="numeric">Valor (R$)</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r:${registros}">
+                    <td><a th:href="@{/leads/{id}(id=${r.lead.id})}" th:text="${r.lead.nome}"></a></td>
+                    <td th:text="${r.imovel.titulo}"></td>
+                    <td class="numeric" th:text="${#numbers.formatDecimal(r.valor,1,'POINT',2,'COMMA')}"></td>
+                    <td><span class="tag" th:attr="data-status=${r.situacao.name()}" th:text="${r.situacao.descricao}"></span></td>
+                    <td class="actions">
+                        <th:block th:if="${r.situacao.name() != 'ACEITA' and r.lead.etapa.name() != 'GANHO' and r.lead.etapa.name() != 'PERDIDO'}">
+                            <a class="btn secondary small" th:href="@{/propostas/{id}/editar(id=${r.id})}">Editar</a>
+                            <form th:action="@{/propostas/{id}/excluir(id=${r.id})}" method="post" data-confirm="Excluir esta proposta?">
+                                <button class="danger">Excluir</button>
+                            </form>
+                        </th:block>
+                        <span class="muted" th:unless="${r.situacao.name() != 'ACEITA' and r.lead.etapa.name() != 'GANHO' and r.lead.etapa.name() != 'PERDIDO'}">Consulta</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td class="empty" colspan="5">Nenhuma proposta registrada.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

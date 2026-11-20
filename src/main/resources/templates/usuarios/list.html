@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Usuários')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Usuários <span class="page-count" th:text="${#lists.size(registros)}"></span></h1><p class="muted">Aprove cadastros e defina o acesso da equipe.</p></div>
+        <a class="btn" th:href="@{/usuarios/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Novo usuário</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Lista de usuarios">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Nome</th>
+                    <th scope="col">E-mail</th>
+                    <th scope="col">Perfil</th>
+                    <th scope="col">Acesso</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r:${registros}">
+                    <td th:text="${r.nome}"></td>
+                    <td th:text="${r.email}"></td>
+                    <td th:text="${r.perfil.descricao}"></td>
+                    <td><span class="tag" th:attr="data-status=${r.ativo ? 'ATIVO' : 'INATIVO'}" th:text="${r.ativo ? 'Ativo' : 'Inativo'}"></span></td>
+                    <td class="actions">
+                        <th:block th:if="${r.id != actor.id}">
+                            <a class="btn secondary small" th:href="@{/usuarios/{id}/editar(id=${r.id})}">Editar</a>
+                            <form th:action="@{/usuarios/{id}/excluir(id=${r.id})}" method="post" data-confirm="Excluir este usuário?">
+                                <button class="danger">Excluir</button>
+                            </form>
+                        </th:block>
+                        <span class="muted" th:unless="${r.id != actor.id}">Consulta</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td class="empty" colspan="5">Nenhum usuário encontrado.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

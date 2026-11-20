@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head(${titulo})}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div>
+                        <h1 th:text="${titulo}"></h1>
+            <p class="muted">Cliente, imóvel de interesse e agendamento.</p>
+        </div>
+    </div>
+    <section class="panel form-panel">
+        <form th:action="${acao}" method="post" th:object="${form}" data-imoveis-por-lead>
+            <div th:replace="~{fragments::errosDoFormulario}"></div>
+            <div class="fields">
+                <div class="field">
+                    <label for="leadId">Cliente</label>
+                    <select id="leadId" th:field="*{leadId}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('leadId')},aria-describedby=${#fields.hasErrors('leadId') ? 'erro-leadId' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${leads}" th:value="${op.id}" th:text="${op.nome}"></option>
+                    </select>
+                    <p class="error-text" id="erro-leadId" role="alert" th:if="${#fields.hasErrors('leadId')}" th:errors="*{leadId}"></p>
+                </div>
+                <div class="field">
+                    <label for="imovelId">Imóvel de interesse</label>
+                    <select id="imovelId" th:field="*{imovelId}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('imovelId')},aria-describedby=${#fields.hasErrors('imovelId') ? 'erro-imovelId' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${imoveis}" th:value="${op.id}" th:text="${op.titulo}"></option>
+                    </select>
+                    <p class="muted help">Selecione o cliente. Se não houver opções, adicione um interesse na ficha dele.</p>
+                    <p class="error-text" id="erro-imovelId" role="alert" th:if="${#fields.hasErrors('imovelId')}" th:errors="*{imovelId}"></p>
+                </div>
+                <div class="field">
+                    <label for="agendadaEm">Data e hora</label>
+                    <input id="agendadaEm" type="datetime-local" th:field="*{agendadaEm}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('agendadaEm')},aria-describedby=${#fields.hasErrors('agendadaEm') ? 'erro-agendadaEm' : null}">
+                    <p class="error-text" id="erro-agendadaEm" role="alert" th:if="${#fields.hasErrors('agendadaEm')}" th:errors="*{agendadaEm}"></p>
+                </div>
+                <div class="field">
+                    <label for="situacao">Situação</label>
+                    <select id="situacao" th:field="*{situacao}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('situacao')},aria-describedby=${#fields.hasErrors('situacao') ? 'erro-situacao' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${situacoes}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="error-text" id="erro-situacao" role="alert" th:if="${#fields.hasErrors('situacao')}" th:errors="*{situacao}"></p>
+                </div>
+                <div class="field check-field">
+                    <label for="virtual">Visita virtual</label>
+                    <input id="virtual" type="checkbox" th:field="*{virtual}"  th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('virtual')},aria-describedby=${#fields.hasErrors('virtual') ? 'erro-virtual' : null}">
+                    <p class="error-text" id="erro-virtual" role="alert" th:if="${#fields.hasErrors('virtual')}" th:errors="*{virtual}"></p>
+                </div>
+                <div class="field">
+                    <label for="km">Deslocamento total (km)</label>
+                    <input id="km" type="number" th:field="*{km}" required min="0" step="0.01" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('km')},aria-describedby=${#fields.hasErrors('km') ? 'erro-km' : null}">
+                    <p class="muted help">Informe zero para visita virtual.</p>
+                    <p class="error-text" id="erro-km" role="alert" th:if="${#fields.hasErrors('km')}" th:errors="*{km}"></p>
+                </div>
+                <div class="field full">
+                    <label for="observacoes">Observações</label>
+                    <textarea id="observacoes" placeholder="Observações sobre o atendimento" th:field="*{observacoes}" maxlength="2000" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('observacoes')},aria-describedby=${#fields.hasErrors('observacoes') ? 'erro-observacoes' : null}"></textarea>
+                    <p class="error-text" id="erro-observacoes" role="alert" th:if="${#fields.hasErrors('observacoes')}" th:errors="*{observacoes}"></p>
+                </div>
+            </div>
+            <div class="formfooter">
+                <button class="btn">Salvar visita</button>
+                <a class="btn secondary" th:href="@{/visitas}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

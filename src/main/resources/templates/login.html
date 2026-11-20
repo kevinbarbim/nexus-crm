@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Acessar o CRM')}"></head>
+<body class="auth-page">
+<svg th:replace="~{fragments::icones}"></svg>
+<div class="auth">
+    <section th:replace="~{fragments::apresentacao}"></section>
+    <section class="auth-form">
+        <div>
+            <h2>Acessar o CRM</h2>
+            <p class="muted">Entre com o e-mail cadastrado na equipe.</p>
+            <p class="notice" role="status" th:if="${param.cadastro}">Cadastro recebido. Aguarde a aprovação do administrador.</p>
+            <p class="notice" role="status" th:if="${param.enviado}">Se houver um acesso ativo para este e-mail, enviaremos as instruções.</p>
+            <p class="notice" role="status" th:if="${param.redefinida}">Senha atualizada. Entre com a nova senha.</p>
+            <p class="notice" role="status" th:if="${param.acessoAlterado}">Seu acesso foi alterado. Entre novamente com um cadastro ativo.</p>
+            <p class="form-errors error-text" role="alert" th:if="${param.error}">E-mail, senha ou situação de acesso inválidos.</p>
+            <form th:action="@{/login}" method="post">
+                <div class="field">
+                    <label for="username">E-mail</label>
+                    <input id="username" name="username" type="email" required autocomplete="username" placeholder="seuemail@exemplo.com">
+                </div>
+                <div class="field">
+                    <label for="password">Senha</label>
+                    <div class="password-field">
+                        <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha">
+                        <button class="password-toggle" type="button" data-password="password" aria-label="Mostrar senha" aria-pressed="false"><svg th:replace="~{fragments::icone('olho')}"></svg></button>
+                    </div>
+                </div>
+                <button class="btn">Entrar<svg th:replace="~{fragments::icone('seta')}"></svg></button>
+            </form>
+            <div class="links"><a th:href="@{/recuperar}">Esqueci minha senha</a><a th:href="@{/cadastro}">Criar acesso</a></div>
+            <p class="auth-footnote">Nexus · Grupo NexGen</p>
+        </div>
+    </section>
+</div>
+</body>
+</html>

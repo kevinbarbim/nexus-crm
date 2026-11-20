@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Atendimento')}">
+</head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}">
+</aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+<p th:replace="~{fragments::salvo}">
+</p>
+<div class="top">
+<div>
+<div class="eyebrow">Atendimento</div>
+<h1 th:text="${lead.nome}">
+</h1>
+<span class="tag" th:attr="data-status=${lead.etapa.name()}" th:text="${lead.etapa.descricao}">
+</span>
+</div>
+<div class="inline">
+<a class="btn secondary" th:href="@{/leads/{id}/editar(id=${lead.id})}">Editar dados</a>
+<a class="btn secondary" th:href="@{/leads}">Voltar ao funil</a>
+</div>
+</div>
+<div class="detailgrid">
+<div>
+<section class="panel">
+<h2>Dados e próximo passo</h2>
+<dl class="data">
+<div>
+<dt>Telefone</dt>
+<dd th:text="${lead.telefone}">
+</dd>
+</div>
+<div>
+<dt>E-mail</dt>
+<dd th:text="${#strings.isEmpty(lead.email) ? 'Não informado' : lead.email}">
+</dd>
+</div>
+<div>
+<dt>Orçamento</dt>
+<dd th:text="'R$ '+${#numbers.formatDecimal(lead.orcamento,1,'POINT',2,'COMMA')}">
+</dd>
+</div>
+<div>
+<dt>Responsável</dt>
+<dd th:text="${lead.responsavel.nome}">
+</dd>
+</div>
+</dl>
+<p class="muted" th:text="${lead.observacoes}">
+</p>
+<form class="inline" th:unless="${encerrado}" th:action="@{/leads/{id}/etapa(id=${lead.id})}" method="post">
+<label for="etapa">Etapa</label>
+<select id="etapa" name="etapa">
+<option th:each="e:${etapas}" th:value="${e}" th:text="${e.descricao}" th:selected="${e==lead.etapa}">
+</option>
+</select>
+<select name="motivo" aria-label="Motivo da perda">
+<option value="">Motivo, se perdido</option>
+<option th:each="m:${motivos}" th:value="${m.name()}" th:text="${m.descricao}">
+</option>
+</select>
+<button class="btn small">Atualizar</button>
+</form>
+<p th:if="${encerrado}" class="muted" th:text="${lead.motivoPerda}">
+</p>
+</section>
+<section class="panel">
+<div class="top">
+<h2>Imóveis de interesse</h2>
+</div>
+<p class="muted help" th:if="${#lists.isEmpty(interesses)}">Nenhum imóvel de interesse adicionado.</p>
+<div class="recent" th:each="it:${interesses}">
+<div>
+<strong th:text="${it.imovel.titulo}">
+</strong>
+<small style="display:block" th:text="${it.imovel.bairro}">
+</small>
+</div>
+<form th:unless="${encerrado}" th:action="@{/interesses/{id}/excluir(id=${it.id})}" method="post">
+<button class="danger">Remover</button>
+</form>
+</div>
+<form class="inline" th:unless="${encerrado}" th:action="@{/leads/{id}/interesses(id=${lead.id})}" method="post">
+<select name="imovelId" required aria-label="Adicionar imóvel de interesse">
+<option value="">Selecione um imóvel</option>
+<option th:each="i:${imoveis}" th:value="${i.id}" th:text="${i.titulo}">
+</option>
+</select>
+<button class="btn small secondary">Adicionar interesse</button>
+</form>
+</section>
+<section class="panel">
+<div class="top">
+<h2>Propostas</h2>
+<a class="btn secondary small" th:unless="${encerrado}" th:href="@{/propostas/novo(leadId=${lead.id})}">Registrar proposta</a>
+</div>
+<div class="recent" th:each="p:${propostas}">
+<div>
+<strong th:text="${p.imovel.titulo}">
+</strong>
+<small style="display:block" th:text="'R$ '+${#numbers.formatDecimal(p.valor,1,'POINT',2,'COMMA')}">
+</small>
+<span class="tag" th:attr="data-status=${p.situacao.name()}" th:text="${p.situacao.descricao}">
+</span>
+</div>
+<form th:if="${p.situacao.name()=='PENDENTE' and !encerrado}" th:action="@{/propostas/{id}/aceitar(id=${p.id})}" method="post" data-confirm="Aceitar esta proposta e encerrar o atendimento como ganho?">
+<button class="btn small">Aceitar proposta</button>
+</form>
+</div>
+<p class="muted" th:if="${#lists.isEmpty(propostas)}">Nenhuma proposta registrada.</p>
+</section>
+</div>
+<div>
+<section class="panel">
+<div class="top">
+<h2>Atividades</h2>
+<a class="btn secondary small" th:unless="${encerrado}" th:href="@{/atividades/novo(leadId=${lead.id})}">Nova</a>
+</div>
+<p class="muted help" th:if="${#lists.isEmpty(tarefas)}">Nenhuma atividade registrada para este cliente.</p>
+<div class="timeline" th:each="t:${tarefas}">
+<strong th:text="${t.titulo}">
+</strong>
+<small style="display:block" th:text="${#temporals.format(t.prazo,'dd/MM/yyyy HH:mm')}">
+</small>
+<span class="tag" th:attr="data-status=${t.concluidaEm==null ? 'PENDENTE' : 'CONCLUIDA'}" th:text="${t.concluidaEm==null}?'Pendente':'Concluída'">
+</span>
+</div>
+</section>
+<section class="panel">
+<div class="top">
+<h2>Visitas</h2>
+<a class="btn secondary small" th:unless="${encerrado}" th:href="@{/visitas/novo(leadId=${lead.id})}">Agendar</a>
+</div>
+<p class="muted help" th:if="${#lists.isEmpty(visitas)}">Nenhuma visita registrada para este cliente.</p>
+<div class="timeline" th:each="v:${visitas}">
+<strong th:text="${v.imovel.titulo}">
+</strong>
+<small style="display:block" th:text="${#temporals.format(v.agendadaEm,'dd/MM/yyyy HH:mm')}">
+</small>
+<span class="tag" th:attr="data-status=${v.situacao.name()}" th:text="${v.situacao.descricao}">
+</span>
+<small th:text="${v.virtual}?'Virtual':${v.km}+' km'">
+</small>
+</div>
+</section>
+<section class="panel">
+<h2>Histórico do atendimento</h2>
+<p class="muted help" th:if="${#lists.isEmpty(historico)}">Nenhuma mudança de etapa registrada.</p>
+<div class="timeline" th:each="h:${historico}">
+<strong th:text="${h.etapaNova}">
+</strong>
+<small style="display:block" th:text="${#temporals.format(h.alteradaEm,'dd/MM/yyyy HH:mm')}+' · '+${h.autor.nome}">
+</small>
+</div>
+</section>
+<form th:unless="${encerrado}" th:action="@{/leads/{id}/excluir(id=${lead.id})}" method="post" data-confirm="Excluir o lead e seus registros vinculados?">
+<button class="danger">Excluir este atendimento</button>
+</form>
+</div>
+</div>
+</main>
+</body>
+</html>

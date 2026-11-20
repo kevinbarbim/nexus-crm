@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head(${titulo})}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div>
+                        <h1 th:text="${titulo}"></h1>
+            <p class="muted">Dados de acesso e permissões da equipe.</p>
+        </div>
+    </div>
+    <section class="panel form-panel">
+        <form th:action="${acao}" method="post" th:object="${form}">
+            <div th:replace="~{fragments::errosDoFormulario}"></div>
+            <div class="fields">
+                <div class="field">
+                    <label for="nome">Nome</label>
+                    <input id="nome" type="text" autocomplete="name" placeholder="Nome completo" th:field="*{nome}" required maxlength="120" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('nome')},aria-describedby=${#fields.hasErrors('nome') ? 'erro-nome' : null}">
+                    <p class="error-text" id="erro-nome" role="alert" th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}"></p>
+                </div>
+                <div class="field">
+                    <label for="email">E-mail de acesso</label>
+                    <input id="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" th:field="*{email}" required maxlength="180" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('email')},aria-describedby=${#fields.hasErrors('email') ? 'erro-email' : null}">
+                    <p class="error-text" id="erro-email" role="alert" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+                </div>
+                <div class="field">
+                    <label for="perfil">Perfil</label>
+                    <select id="perfil" th:field="*{perfil}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('perfil')},aria-describedby=${#fields.hasErrors('perfil') ? 'erro-perfil' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${perfis}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="error-text" id="erro-perfil" role="alert" th:if="${#fields.hasErrors('perfil')}" th:errors="*{perfil}"></p>
+                </div>
+                <div class="field check-field">
+                    <label for="ativo">Acesso ativo</label>
+                    <input id="ativo" type="checkbox" th:field="*{ativo}"  th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('ativo')},aria-describedby=${#fields.hasErrors('ativo') ? 'erro-ativo' : null}">
+                    <p class="error-text" id="erro-ativo" role="alert" th:if="${#fields.hasErrors('ativo')}" th:errors="*{ativo}"></p>
+                </div>
+                <div class="field">
+                    <label for="senha">Senha</label>
+                    <input id="senha" type="password" th:field="*{senha}" maxlength="72" autocomplete="new-password" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('senha')},aria-describedby=${#fields.hasErrors('senha') ? 'erro-senha' : null}">
+                    <p class="muted help">Mínimo de 10 caracteres e máximo de 72 bytes UTF-8. Na edição, deixe vazia para manter a senha.</p>
+                    <p class="error-text" id="erro-senha" role="alert" th:if="${#fields.hasErrors('senha')}" th:errors="*{senha}"></p>
+                </div>
+            </div>
+            <div class="formfooter">
+                <button class="btn">Salvar usuário</button>
+                <a class="btn secondary" th:href="@{/usuarios}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Relatórios')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+    <header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Relatórios</h1><p class="muted">Atendimentos, conversão e visitas. Exporte os dados para o Excel.</p></div>
+        <a class="btn" th:href="@{/exportar.csv}"><svg th:replace="~{fragments::icone('documento')}"></svg>Exportar dados CSV</a>
+    </div>
+    <section class="panel">
+        <div class="panel-heading"><div><h2>Critérios dos relatórios</h2></div></div>
+        <div class="criteria-list">
+            <article class="criterion">
+                <h3>Conversão entre encerrados</h3><p>Ganhos divididos pela soma de ganhos e perdas. Leads abertos não entram nesse denominador.</p>
+            </article>
+            <article class="criterion">
+                <h3>Tempo de primeiro contato</h3><p>Horas corridas entre o cadastro e o primeiro contato registrado.</p>
+            </article>
+            <article class="criterion">
+                <h3>Deslocamento realizado</h3><p>Soma dos quilômetros das visitas realizadas. Agendamentos e cancelamentos não entram no total.</p>
+            </article>
+            <article class="criterion">
+                <h3>Visitas virtuais</h3><p>Visitas realizadas sem deslocamento físico.</p>
+            </article>
+        </div>
+    </section>
+    <section class="panel" th:each="bloco:${blocos}">
+        <h2 th:text="${bloco.titulo}"></h2>
+        <div class="tablewrap" tabindex="0" role="region" th:attr="aria-label=${bloco.titulo}">
+            <table th:if="${!#lists.isEmpty(bloco.linhas)}">
+                <thead><tr><th scope="col" th:each="entry:${bloco.linhas[0]}" th:text="${entry.key}"></th></tr></thead>
+                <tbody><tr th:each="linha:${bloco.linhas}"><td th:each="entry:${linha}" th:text="${entry.value}"></td></tr></tbody>
+            </table>
+            <div class="empty-state" th:if="${#lists.isEmpty(bloco.linhas)}"><strong>Sem registros neste recorte</strong><p>Os dados aparecerão quando houver atendimentos correspondentes.</p></div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#08090b">
+    <title th:text="${title}+' | Nexus'">Nexus</title>
+    <link rel="icon" type="image/png" th:href="@{/css/nexus-logo.png}">
+    <link rel="preload" th:href="@{/css/fonts/InterVariable.woff2}" as="font" type="font/woff2" crossorigin>
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css(v='20261011')}">
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body>
+<!-- Ícones SVG compartilhados. Não dependem de bibliotecas ou serviços externos. -->
+<svg th:fragment="icones" class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icone-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="icone-funil" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></symbol>
+    <symbol id="icone-imovel" viewBox="0 0 24 24"><path d="M3 21V8l8-5v18M11 9l10 4v8M2 21h20M6 10h2M6 14h2M6 18h2M15 15h2M15 18h2"/></symbol>
+    <symbol id="icone-check" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m7 12 3 3 7-7"/></symbol>
+    <symbol id="icone-calendario" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></symbol>
+    <symbol id="icone-documento" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="icone-qualidade" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6zM8 12l3 3 5-6"/></symbol>
+    <symbol id="icone-grafico" viewBox="0 0 24 24"><path d="M4 3v17h17M8 16v-5M13 16V7M18 16V4"/></symbol>
+    <symbol id="icone-usuarios" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol>
+    <symbol id="icone-usuario" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+    <symbol id="icone-sair" viewBox="0 0 24 24"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M12 12h9m-4-4 4 4-4 4"/></symbol>
+    <symbol id="icone-seta" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="icone-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icone-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.1"/></symbol>
+    <symbol id="icone-olho" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icone-cadeado" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="icone-busca" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="icone-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="icone-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
+    <symbol id="icone-lua" viewBox="0 0 24 24"><path d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13z"/></symbol>
+</svg>
+<svg th:fragment="icone(nome)" class="icon" aria-hidden="true"><use th:href="'#icone-'+${nome}"></use></svg>
+
+<button th:fragment="tema" class="theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema claro" hidden>
+    <svg class="icon theme-sun" aria-hidden="true"><use href="#icone-sol"></use></svg>
+    <svg class="icon theme-moon" aria-hidden="true"><use href="#icone-lua"></use></svg>
+    <span class="theme-label">Tema claro</span>
+</button>
+
+<a th:fragment="marca(url)" class="brand" th:href="${url}" aria-label="Nexus, início">
+    <span class="brand-mark" aria-hidden="true"><img th:src="@{/css/nexus-logo.png}" alt="" width="34" height="34"></span>
+    <span class="brand-word">Nexus</span>
+</a>
+
+<aside class="sidebar" th:fragment="sidebar">
+    <a th:replace="~{fragments::marca(@{/})}"></a>
+    <p class="caption">Grupo NexGen · Rio Preto</p>
+    <button class="menu-toggle" type="button" aria-controls="menu-principal" aria-expanded="false">Menu<svg th:replace="~{fragments::icone('grid')}"></svg></button>
+    <nav id="menu-principal" aria-label="Menu principal">
+        <div class="nav-caption">Atendimento</div>
+        <a th:href="@{/}"><svg th:replace="~{fragments::icone('grid')}"></svg><span>Visão geral</span></a>
+        <a th:href="@{/leads}"><svg th:replace="~{fragments::icone('funil')}"></svg><span>Funil de clientes</span></a>
+        <a th:href="@{/imoveis}"><svg th:replace="~{fragments::icone('imovel')}"></svg><span>Imóveis</span></a>
+        <a th:href="@{/atividades}"><svg th:replace="~{fragments::icone('check')}"></svg><span>Atividades</span></a>
+        <a th:href="@{/visitas}"><svg th:replace="~{fragments::icone('calendario')}"></svg><span>Visitas</span></a>
+        <a th:href="@{/propostas}"><svg th:replace="~{fragments::icone('documento')}"></svg><span>Propostas</span></a>
+        <div class="nav-caption nav-group">Gestão</div>
+        <a th:href="@{/qualidade}"><svg th:replace="~{fragments::icone('qualidade')}"></svg><span>Qualidade</span></a>
+        <a th:href="@{/relatorios}"><svg th:replace="~{fragments::icone('grafico')}"></svg><span>Relatórios</span></a>
+        <a th:if="${admin}" th:href="@{/usuarios}"><svg th:replace="~{fragments::icone('usuarios')}"></svg><span>Usuários</span></a>
+    </nav>
+    <div class="bottom">
+        <div class="account">
+            <span class="avatar" th:text="${#strings.substring(actor.nome,0,1)}">N</span>
+            <div><strong th:text="${actor.nome}">Usuário</strong><small th:text="${actor.perfil.descricao}" th:if="${actor.nome != actor.perfil.descricao}">Perfil</small></div>
+        </div>
+        <a class="profile-link" th:href="@{/perfil}"><svg th:replace="~{fragments::icone('usuario')}"></svg><span>Meu perfil</span></a>
+        <form th:action="@{/logout}" method="post"><button class="logout"><svg th:replace="~{fragments::icone('sair')}"></svg><span>Sair da conta</span></button></form>
+    </div>
+    <dialog id="confirmacao" class="confirm-dialog" aria-labelledby="confirmacao-titulo" aria-describedby="confirmacao-texto">
+        <span class="auth-symbol"><svg th:replace="~{fragments::icone('info')}"></svg></span>
+        <h2 id="confirmacao-titulo">Confirmar ação</h2>
+        <p id="confirmacao-texto"></p>
+        <form method="dialog" class="dialog-actions">
+            <button class="btn secondary" value="cancelar" autofocus>Cancelar</button>
+            <button class="btn" value="confirmar">Confirmar</button>
+        </form>
+    </dialog>
+</aside>
+
+<header th:fragment="barra" class="workspace-bar">
+    <div class="workspace-path"><strong>Grupo NexGen</strong><span class="workspace-divider" aria-hidden="true">/</span><span class="workspace-section">Atendimento</span></div>
+    <div class="workspace-actions"><span class="workspace-location">São José do Rio Preto, SP</span><button th:replace="~{fragments::tema}"></button></div>
+</header>
+
+<section th:fragment="apresentacao" class="auth-art">
+    <div class="auth-heading"><a th:replace="~{fragments::marca(@{/login})}"></a><button th:replace="~{fragments::tema}"></button></div>
+    <div class="auth-story">
+        <p class="auth-kicker">CRM imobiliário</p>
+        <h1>Grupo<br>NexGen.</h1>
+        <p class="auth-company">São José do Rio Preto, SP</p>
+    </div>
+    <small>Acesso aos clientes e negociações da equipe.</small>
+</section>
+
+<p th:fragment="salvo" class="notice success" role="status" th:if="${param.salvo}"><svg th:replace="~{fragments::icone('check')}"></svg><span>Dados atualizados.</span></p>
+<div th:fragment="errosDoFormulario" class="form-errors" th:if="${#fields.hasGlobalErrors()}" role="alert">
+    <p class="error-text" th:each="erro : ${#fields.globalErrors()}" th:text="${erro}"></p>
+</div>
+</body>
+</html>

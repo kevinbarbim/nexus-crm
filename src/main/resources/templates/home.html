@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Visão geral')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main class="dashboard">
+    <header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><div class="dashboard-kicker">Carteira e atendimento<span th:text="'Atualizado às '+${#temporals.format(agora,'HH:mm')}"></span></div><h1>Visão geral</h1><p class="muted">Clientes, negociações e os próximos retornos da equipe.</p></div>
+        <div class="inline">
+            <a class="btn secondary" th:href="@{/leads}">Abrir funil</a>
+            <a class="btn" th:href="@{/leads/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Novo lead</a>
+        </div>
+    </div>
+    <section class="stats" aria-label="Indicadores do atendimento">
+        <div class="stat">
+            <div class="stat-heading"><small>Leads cadastrados</small></div>
+            <div class="number" th:text="${totalLeads}">0</div>
+            <small th:text="${admin}?'Todos os corretores':'Sua carteira de clientes'"></small>
+        </div>
+        <div class="stat">
+            <div class="stat-heading"><small>Negociações abertas</small></div>
+            <div class="number" th:text="${ativos}">0</div>
+            <small>Atendimentos em andamento</small>
+        </div>
+        <div class="stat">
+            <div class="stat-heading"><small>Conversão</small></div>
+            <div class="number" th:text="${conversao}">—</div>
+            <small>Entre atendimentos encerrados</small>
+        </div>
+        <div class="stat" th:classappend="${atrasadas>0}?'stat-alert':''">
+            <div class="stat-heading"><small>Atividades atrasadas</small></div>
+            <div class="number" th:text="${atrasadas}">0</div>
+            <small>Aguardando retorno</small>
+        </div>
+    </section>
+    <div class="dashboard-charts">
+        <section class="panel stage-chart" data-resumo-funil aria-busy="true" data-state="loading" aria-labelledby="etapas-titulo">
+            <div class="panel-heading"><div><h2 id="etapas-titulo">Clientes por etapa</h2><p class="muted">Distribuição atual da carteira</p></div><a class="text-link" th:href="@{/leads}">Ver funil<svg th:replace="~{fragments::icone('seta')}"></svg></a></div>
+            <ol class="stage-rows">
+                <li class="stage-row" data-stage="NOVO"><span class="stage-label">Novo</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="CONTATADO"><span class="stage-label">Contatado</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="QUALIFICADO"><span class="stage-label">Qualificado</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="VISITA"><span class="stage-label">Visita</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="PROPOSTA"><span class="stage-label">Proposta</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="GANHO"><span class="stage-label">Ganho</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+                <li class="stage-row" data-stage="PERDIDO"><span class="stage-label">Perdido</span><span class="stage-track" aria-hidden="true"><span class="stage-fill"></span></span><strong class="stage-value">—</strong></li>
+            </ol>
+            <div class="chart-footer"><p role="status">Carregando distribuição…</p><a class="text-link chart-retry" th:href="@{/}" hidden>Tentar novamente</a></div>
+            <noscript><p class="muted">Ative o JavaScript para visualizar a distribuição, ou abra o funil de clientes.</p></noscript>
+        </section>
+        <section class="panel portfolio-chart" aria-labelledby="carteira-titulo">
+            <div class="panel-heading"><div><h2 id="carteira-titulo">Andamento da carteira</h2><p class="muted">Abertos e encerrados</p></div><svg th:replace="~{fragments::icone('grafico')}"></svg></div>
+            <div class="portfolio-content">
+                <div class="portfolio-ring">
+                    <!-- pathLength=100 permite usar a porcentagem diretamente no círculo. -->
+                    <svg viewBox="0 0 200 200" aria-hidden="true">
+                        <circle class="ring-base" cx="100" cy="100" r="76" pathLength="100"></circle>
+                        <circle class="ring-value" cx="100" cy="100" r="76" pathLength="100" th:attr="stroke-dasharray=${totalLeads>0?100.0*ativos/totalLeads:0}+' 100'"></circle>
+                    </svg>
+                    <div class="ring-label"><strong th:text="${ativos}">0</strong><span>em andamento</span></div>
+                </div>
+                <div class="portfolio-legend">
+                    <div><span class="legend-dot legend-open" aria-hidden="true"></span><span>Em andamento</span><strong th:text="${ativos}">0</strong></div>
+                    <div><span class="legend-dot legend-closed" aria-hidden="true"></span><span>Encerrados</span><strong th:text="${totalLeads - ativos}">0</strong></div>
+                </div>
+            </div>
+            <div class="chart-footer"><p th:text="${totalLeads>0}?'A carteira inclui todas as etapas do atendimento.':'Cadastre um cliente para começar.'"></p></div>
+        </section>
+    </div>
+    <div class="grid2">
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Atividades pendentes</h2>
+                <a class="text-link" th:href="@{/atividades}">Ver todas</a>
+            </div>
+            <div class="empty-state" th:if="${#lists.isEmpty(tarefas)}">
+                <strong>Nenhuma atividade pendente</strong><p>As atividades agendadas aparecem aqui.</p>
+            </div>
+            <div class="list-labels" th:unless="${#lists.isEmpty(tarefas)}"><span>Cliente / atividade</span><span>Prazo</span></div>
+            <a class="task" th:each="t:${tarefas}" th:href="@{/atividades/{id}/editar(id=${t.id})}">
+                <div class="task-main">
+                    <div><strong th:text="${t.lead.nome}"></strong><small th:text="${t.titulo}"></small></div>
+                </div>
+                <div class="task-meta">
+                    <span class="tag" th:classappend="${t.prazo.isBefore(agora)}?'late':''" data-status="PENDENTE" th:text="${t.prazo.isBefore(agora)}?'Atrasada':'Pendente'"></span>
+                    <time th:datetime="${t.prazo}" th:text="${#temporals.format(t.prazo,'dd/MM · HH:mm')}"></time>
+                </div>
+            </a>
+        </section>
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Últimos atendimentos</h2>
+                <a class="text-link" th:href="@{/leads}">Abrir funil</a>
+            </div>
+            <div class="empty-state" th:if="${#lists.isEmpty(recentes)}">
+                <strong>Nenhum atendimento cadastrado</strong><p>Cadastre um lead para iniciar o atendimento.</p>
+                <a class="text-link" th:href="@{/leads/novo}">Cadastrar lead</a>
+            </div>
+            <div class="list-labels" th:unless="${#lists.isEmpty(recentes)}"><span>Cliente / corretor</span><span>Etapa</span></div>
+            <a class="recent" th:each="l:${recentes}" th:href="@{/leads/{id}(id=${l.id})}">
+                <div class="recent-name"><div><strong th:text="${l.nome}"></strong><small th:text="${l.responsavel.nome}"></small></div></div>
+                <span class="tag" th:attr="data-status=${l.etapa.name()}" th:text="${l.etapa.descricao}"></span>
+            </a>
+        </section>
+    </div>
+</main>
+<script th:src="@{/js/dashboard.js}" defer></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Meu perfil')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+    <header th:replace="~{fragments::barra}"></header>
+    <div class="top"><div><h1>Meu perfil</h1><p class="muted">Atualize seu nome e sua senha de acesso.</p></div></div>
+    <p class="notice" role="status" th:if="${param.salvo}"><svg th:replace="~{fragments::icone('check')}"></svg><span>Perfil atualizado.</span></p>
+    <p class="form-errors error-text" role="alert" th:if="${erro}" th:text="${erro}"></p>
+    <section class="panel form-panel profile-panel">
+        <form th:action="@{/perfil}" method="post">
+            <div class="fields">
+                <div class="field full">
+                    <label for="nome">Nome</label>
+                    <input id="nome" name="nome" th:value="${nome}" required maxlength="120" autocomplete="name">
+                </div>
+                <div class="field full">
+                    <label id="email-label">E-mail de acesso</label>
+                    <div class="readonly-value" aria-labelledby="email-label" th:text="${usuario.email}"></div>
+                </div>
+                <div class="field full">
+                    <label for="senha">Nova senha</label>
+                    <div class="password-field">
+                        <input id="senha" name="senha" type="password" maxlength="72" autocomplete="new-password" placeholder="Deixe em branco para manter a senha atual">
+                        <button class="password-toggle" type="button" data-password="senha" aria-label="Mostrar senha" aria-pressed="false"><svg th:replace="~{fragments::icone('olho')}"></svg></button>
+                    </div>
+                    <p class="muted help">Ao trocar, use de 10 caracteres a 72 bytes UTF-8.</p>
+                </div>
+            </div>
+            <div class="formfooter"><button class="btn">Salvar perfil</button></div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

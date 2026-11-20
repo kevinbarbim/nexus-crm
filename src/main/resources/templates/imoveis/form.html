@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head(${titulo})}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div>
+                        <h1 th:text="${titulo}"></h1>
+            <p class="muted">Dados da unidade, valor e disponibilidade.</p>
+        </div>
+    </div>
+    <section class="panel form-panel">
+        <form th:action="${acao}" method="post" th:object="${form}">
+            <div th:replace="~{fragments::errosDoFormulario}"></div>
+            <div class="fields">
+                <div class="field">
+                    <label for="titulo">Título do imóvel</label>
+                    <input id="titulo" type="text" placeholder="Ex.: Apartamento · Residencial Jardim · Unidade 101" th:field="*{titulo}" required maxlength="160" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('titulo')},aria-describedby=${#fields.hasErrors('titulo') ? 'erro-titulo' : null}">
+                    <p class="muted help">Cadastre uma unidade por registro. Inclua empreendimento e unidade no título quando necessário.</p>
+                    <p class="error-text" id="erro-titulo" role="alert" th:if="${#fields.hasErrors('titulo')}" th:errors="*{titulo}"></p>
+                </div>
+                <div class="field">
+                    <label for="tipo">Tipo</label>
+                    <select id="tipo" th:field="*{tipo}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('tipo')},aria-describedby=${#fields.hasErrors('tipo') ? 'erro-tipo' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${tipos}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="error-text" id="erro-tipo" role="alert" th:if="${#fields.hasErrors('tipo')}" th:errors="*{tipo}"></p>
+                </div>
+                <div class="field">
+                    <label for="finalidade">Finalidade</label>
+                    <select id="finalidade" th:field="*{finalidade}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('finalidade')},aria-describedby=${#fields.hasErrors('finalidade') ? 'erro-finalidade' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${finalidades}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="error-text" id="erro-finalidade" role="alert" th:if="${#fields.hasErrors('finalidade')}" th:errors="*{finalidade}"></p>
+                </div>
+                <div class="field">
+                    <label for="situacao">Situação</label>
+                    <select id="situacao" th:field="*{situacao}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('situacao')},aria-describedby=${#fields.hasErrors('situacao') ? 'erro-situacao' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${situacoes}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="muted help">O imóvel passa a negociado ao aceitar uma proposta.</p>
+                    <p class="error-text" id="erro-situacao" role="alert" th:if="${#fields.hasErrors('situacao')}" th:errors="*{situacao}"></p>
+                </div>
+                <div class="field">
+                    <label for="cidade">Cidade</label>
+                    <input id="cidade" type="text" th:field="*{cidade}" required maxlength="100" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('cidade')},aria-describedby=${#fields.hasErrors('cidade') ? 'erro-cidade' : null}">
+                    <p class="error-text" id="erro-cidade" role="alert" th:if="${#fields.hasErrors('cidade')}" th:errors="*{cidade}"></p>
+                </div>
+                <div class="field">
+                    <label for="bairro">Bairro</label>
+                    <input id="bairro" type="text" th:field="*{bairro}" required maxlength="100" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('bairro')},aria-describedby=${#fields.hasErrors('bairro') ? 'erro-bairro' : null}">
+                    <p class="error-text" id="erro-bairro" role="alert" th:if="${#fields.hasErrors('bairro')}" th:errors="*{bairro}"></p>
+                </div>
+                <div class="field">
+                    <label for="quartos">Quartos</label>
+                    <input id="quartos" type="number" th:field="*{quartos}" required min="0" max="99" step="1" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('quartos')},aria-describedby=${#fields.hasErrors('quartos') ? 'erro-quartos' : null}">
+                    <p class="error-text" id="erro-quartos" role="alert" th:if="${#fields.hasErrors('quartos')}" th:errors="*{quartos}"></p>
+                </div>
+                <div class="field">
+                    <label for="area">Área (m²)</label>
+                    <input id="area" type="number" th:field="*{area}" required min="0.01" step="0.01" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('area')},aria-describedby=${#fields.hasErrors('area') ? 'erro-area' : null}">
+                    <p class="error-text" id="erro-area" role="alert" th:if="${#fields.hasErrors('area')}" th:errors="*{area}"></p>
+                </div>
+                <div class="field">
+                    <label for="valor">Valor (R$)</label>
+                    <input id="valor" type="number" th:field="*{valor}" required min="0.01" step="0.01" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('valor')},aria-describedby=${#fields.hasErrors('valor') ? 'erro-valor' : null}">
+                    <p class="error-text" id="erro-valor" role="alert" th:if="${#fields.hasErrors('valor')}" th:errors="*{valor}"></p>
+                </div>
+                <div class="field full">
+                    <label for="descricao">Descrição</label>
+                    <textarea id="descricao" th:field="*{descricao}" maxlength="2000" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('descricao')},aria-describedby=${#fields.hasErrors('descricao') ? 'erro-descricao' : null}"></textarea>
+                    <p class="error-text" id="erro-descricao" role="alert" th:if="${#fields.hasErrors('descricao')}" th:errors="*{descricao}"></p>
+                </div>
+            </div>
+            <div class="formfooter">
+                <button class="btn">Salvar imóvel</button>
+                <a class="btn secondary" th:href="@{/imoveis}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

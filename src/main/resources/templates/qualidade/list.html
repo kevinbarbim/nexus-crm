@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Qualidade')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Qualidade <span class="page-count" th:text="${#lists.size(registros)}"></span></h1><p class="muted">Registre ocorrências e acompanhe as ações corretivas.</p></div>
+        <a class="btn" th:href="@{/qualidade/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Nova ocorrência</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Lista de qualidade">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Categoria</th>
+                    <th scope="col">Descrição</th>
+                    <th scope="col">Ação corretiva</th>
+                    <th scope="col">Registro</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r:${registros}">
+                    <td><a th:href="@{/leads/{id}(id=${r.lead.id})}" th:text="${r.lead.nome}"></a></td>
+                    <td th:text="${r.categoria.descricao}"></td>
+                    <td th:text="${r.descricao}"></td>
+                    <td th:text="${r.acao}"></td>
+                    <td th:text="${#temporals.format(r.criadaEm,'dd/MM/yyyy HH:mm')}"></td>
+                    <td class="actions">
+                        <th:block th:if="${true}">
+                            <a class="btn secondary small" th:href="@{/qualidade/{id}/editar(id=${r.id})}">Editar</a>
+                            <form th:action="@{/qualidade/{id}/excluir(id=${r.id})}" method="post" data-confirm="Excluir esta ocorrência?">
+                                <button class="danger">Excluir</button>
+                            </form>
+                        </th:block>
+                        <span class="muted" th:unless="${true}">Consulta</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td class="empty" colspan="6">Nenhuma ocorrência registrada.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

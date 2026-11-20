@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Escolher nova senha')}"></head>
+<body class="auth-page">
+<svg th:replace="~{fragments::icones}"></svg>
+<div class="auth">
+    <section th:replace="~{fragments::apresentacao}"></section>
+    <section class="auth-form">
+        <div>
+            <h2>Escolher nova senha</h2>
+            <p class="muted">Defina uma nova senha para continuar.</p>
+            <p class="notice" role="status" th:if="${param.cadastro}">Cadastro recebido. Aguarde a aprovação do administrador.</p>
+            <p class="notice" role="status" th:if="${param.enviado}">Se houver um acesso ativo para este e-mail, enviaremos as instruções.</p>
+            <p class="notice" role="status" th:if="${param.redefinida}">Senha atualizada. Entre com a nova senha.</p>
+            
+            <p class="form-errors error-text" role="alert" th:if="${erro}" th:text="${erro}"></p>
+            <form th:action="@{/redefinir}" method="post">
+                <div class="field">
+                    <label for="senha">Nova senha</label>
+                    <div class="password-field">
+                        <input id="senha" name="senha" type="password" required minlength="10" maxlength="72" autocomplete="new-password" placeholder="Digite sua nova senha">
+                        <button class="password-toggle" type="button" data-password="senha" aria-label="Mostrar senha" aria-pressed="false"><svg th:replace="~{fragments::icone('olho')}"></svg></button>
+                    </div>
+                    <p class="muted help">Use ao menos 10 caracteres. O limite é de 72 bytes UTF-8.</p>
+                </div>
+                <input type="hidden" name="token" th:value="${token}">
+                <button class="btn">Salvar nova senha<svg th:replace="~{fragments::icone('seta')}"></svg></button>
+            </form>
+            <a class="text-link" th:href="@{/login}">Voltar para entrar</a>
+        </div>
+    </section>
+</div>
+</body>
+</html>

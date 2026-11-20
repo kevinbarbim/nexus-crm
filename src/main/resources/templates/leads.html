@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Funil de clientes')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+    <header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Funil de clientes</h1><p class="muted">Acompanhe cada atendimento, do primeiro contato ao desfecho.</p></div>
+        <a class="btn" th:href="@{/leads/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Novo lead</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <form class="toolbar" th:action="@{/leads}" method="get" role="search">
+        <input name="q" type="search" aria-label="Pesquisar clientes" placeholder="Pesquisar por nome ou telefone" th:value="${q}">
+        <button class="btn secondary"><svg th:replace="~{fragments::icone('busca')}"></svg>Pesquisar</button>
+        <a class="text-link" th:if="${!#strings.isEmpty(q)}" th:href="@{/leads}">Limpar</a>
+    </form>
+    <p class="notice" role="status" th:if="${#lists.isEmpty(leads) and !#strings.isEmpty(q)}"><svg th:replace="~{fragments::icone('busca')}"></svg><span>Nenhum cliente encontrado. Tente outro nome ou telefone.</span></p>
+    <p class="scroll-hint">Navegue pelas etapas na horizontal. Selecione um cliente para abrir sua ficha.</p>
+    <div class="board" tabindex="0" role="region" aria-label="Etapas do funil de clientes">
+        <section class="column" th:each="e:${etapas}" th:attr="data-stage=${e.name()},data-count=${counts[e.name()]!=null?counts[e.name()]:0}">
+            <h2><span class="stage-name" th:text="${e.descricao}"></span><span class="stage-count" th:text="${counts[e.name()]!=null?counts[e.name()]:0}"></span></h2>
+            <p class="column-empty" th:if="${counts[e.name()]==null or counts[e.name()]==0}">Nenhum cliente nesta etapa.</p>
+            <a class="leadcard" th:each="l:${leads}" th:if="${l.etapa==e}" th:href="@{/leads/{id}(id=${l.id})}">
+                <strong th:text="${l.nome}"></strong>
+                <small th:text="${l.telefone}"></small>
+                <div class="budget" th:text="'R$ '+${#numbers.formatDecimal(l.orcamento,1,'POINT',2,'COMMA')}"></div>
+                <span class="tag" th:text="${l.origem.descricao}"></span>
+                <div class="owner"><svg th:replace="~{fragments::icone('usuario')}"></svg><span th:text="${l.responsavel.nome}"></span></div>
+            </a>
+        </section>
+    </div>
+</main>
+</body>
+</html>

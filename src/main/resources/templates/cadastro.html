@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Criar acesso')}"></head>
+<body class="auth-page">
+<svg th:replace="~{fragments::icones}"></svg>
+<div class="auth">
+    <section th:replace="~{fragments::apresentacao}"></section>
+    <section class="auth-form">
+        <div>
+            <h2>Criar acesso</h2>
+            <p class="muted">Preencha os dados para solicitar seu acesso.</p>
+            <p class="notice" role="status" th:if="${param.cadastro}">Cadastro recebido. Aguarde a aprovação do administrador.</p>
+            <p class="notice" role="status" th:if="${param.enviado}">Se houver um acesso ativo para este e-mail, enviaremos as instruções.</p>
+            <p class="notice" role="status" th:if="${param.redefinida}">Senha atualizada. Entre com a nova senha.</p>
+            
+            <p class="form-errors error-text" role="alert" th:if="${erro}" th:text="${erro}"></p>
+            <form th:action="@{/cadastro}" method="post">
+                <div class="field">
+                    <label for="nome">Nome completo</label>
+                    <input id="nome" name="nome" type="text" th:value="${nome}" required maxlength="120" autocomplete="name" placeholder="Nome completo">
+                </div>
+                <div class="field">
+                    <label for="email">E-mail</label>
+                    <input id="email" name="email" type="email" th:value="${email}" required maxlength="180" autocomplete="email" placeholder="seuemail@exemplo.com">
+                </div>
+                <div class="field">
+                    <label for="senha">Senha</label>
+                    <div class="password-field">
+                        <input id="senha" name="senha" type="password" required minlength="10" maxlength="72" autocomplete="new-password" placeholder="Crie uma senha">
+                        <button class="password-toggle" type="button" data-password="senha" aria-label="Mostrar senha" aria-pressed="false"><svg th:replace="~{fragments::icone('olho')}"></svg></button>
+                    </div>
+                    <p class="muted help">Use ao menos 10 caracteres. O limite é de 72 bytes UTF-8.</p>
+                </div>
+                <button class="btn">Criar acesso<svg th:replace="~{fragments::icone('seta')}"></svg></button>
+            </form>
+            <p class="auth-footnote">O administrador aprovará seu acesso como corretor.</p><a class="text-link" th:href="@{/login}">Voltar para entrar</a>
+        </div>
+    </section>
+</div>
+</body>
+</html>

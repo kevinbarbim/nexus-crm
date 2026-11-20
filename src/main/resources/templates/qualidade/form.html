@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head(${titulo})}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div>
+                        <h1 th:text="${titulo}"></h1>
+            <p class="muted">Ocorrência no atendimento e ação corretiva.</p>
+        </div>
+    </div>
+    <section class="panel form-panel">
+        <form th:action="${acao}" method="post" th:object="${form}">
+            <div th:replace="~{fragments::errosDoFormulario}"></div>
+            <div class="fields">
+                <div class="field">
+                    <label for="leadId">Cliente</label>
+                    <select id="leadId" th:field="*{leadId}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('leadId')},aria-describedby=${#fields.hasErrors('leadId') ? 'erro-leadId' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${leads}" th:value="${op.id}" th:text="${op.nome}"></option>
+                    </select>
+                    <p class="error-text" id="erro-leadId" role="alert" th:if="${#fields.hasErrors('leadId')}" th:errors="*{leadId}"></p>
+                </div>
+                <div class="field">
+                    <label for="categoria">Categoria</label>
+                    <select id="categoria" th:field="*{categoria}" required th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('categoria')},aria-describedby=${#fields.hasErrors('categoria') ? 'erro-categoria' : null}">
+                        <option value="">Selecione</option>
+                        <option th:each="op:${categorias}" th:value="${op.name()}" th:text="${op.descricao}"></option>
+                    </select>
+                    <p class="error-text" id="erro-categoria" role="alert" th:if="${#fields.hasErrors('categoria')}" th:errors="*{categoria}"></p>
+                </div>
+                <div class="field full">
+                    <label for="descricao">Descrição da ocorrência</label>
+                    <textarea id="descricao" th:field="*{descricao}" required maxlength="2000" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('descricao')},aria-describedby=${#fields.hasErrors('descricao') ? 'erro-descricao' : null}"></textarea>
+                    <p class="error-text" id="erro-descricao" role="alert" th:if="${#fields.hasErrors('descricao')}" th:errors="*{descricao}"></p>
+                </div>
+                <div class="field full">
+                    <label for="acao">Ação corretiva</label>
+                    <textarea id="acao" th:field="*{acao}" maxlength="2000" th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('acao')},aria-describedby=${#fields.hasErrors('acao') ? 'erro-acao' : null}"></textarea>
+                    <p class="error-text" id="erro-acao" role="alert" th:if="${#fields.hasErrors('acao')}" th:errors="*{acao}"></p>
+                </div>
+            </div>
+            <div class="formfooter">
+                <button class="btn">Salvar ocorrência</button>
+                <a class="btn secondary" th:href="@{/qualidade}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

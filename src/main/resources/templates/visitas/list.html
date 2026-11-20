@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Visitas')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Visitas <span class="page-count" th:text="${#lists.size(registros)}"></span></h1><p class="muted">Agendamentos, visitas realizadas e deslocamento.</p></div>
+        <a class="btn" th:href="@{/visitas/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Agendar visita</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Lista de visitas">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Imóvel</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Formato</th>
+                    <th scope="col" class="numeric">Distância (km)</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r:${registros}">
+                    <td><a th:href="@{/leads/{id}(id=${r.lead.id})}" th:text="${r.lead.nome}"></a></td>
+                    <td th:text="${r.imovel.titulo}"></td>
+                    <td th:text="${#temporals.format(r.agendadaEm,'dd/MM/yyyy HH:mm')}"></td>
+                    <td><span class="tag" th:attr="data-status=${r.situacao.name()}" th:text="${r.situacao.descricao}"></span></td>
+                    <td th:text="${r.virtual ? 'Virtual' : 'Presencial'}"></td>
+                    <td class="numeric" th:text="${r.km}"></td>
+                    <td class="actions">
+                        <th:block th:if="${r.lead.etapa.name() != 'GANHO' and r.lead.etapa.name() != 'PERDIDO'}">
+                            <a class="btn secondary small" th:href="@{/visitas/{id}/editar(id=${r.id})}">Editar</a>
+                            <form th:action="@{/visitas/{id}/excluir(id=${r.id})}" method="post" data-confirm="Excluir esta visita?">
+                                <button class="danger">Excluir</button>
+                            </form>
+                        </th:block>
+                        <span class="muted" th:unless="${r.lead.etapa.name() != 'GANHO' and r.lead.etapa.name() != 'PERDIDO'}">Consulta</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td class="empty" colspan="7">Nenhuma visita registrada.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Recuperar acesso')}"></head>
+<body class="auth-page">
+<svg th:replace="~{fragments::icones}"></svg>
+<div class="auth">
+    <section th:replace="~{fragments::apresentacao}"></section>
+    <section class="auth-form">
+        <div>
+            <h2>Recuperar acesso</h2>
+            <p class="muted">Enviaremos as instruções para o seu e-mail.</p>
+            <p class="notice" role="status" th:if="${param.cadastro}">Cadastro recebido. Aguarde a aprovação do administrador.</p>
+            <p class="notice" role="status" th:if="${param.enviado}">Se houver um acesso ativo para este e-mail, enviaremos as instruções.</p>
+            <p class="notice" role="status" th:if="${param.redefinida}">Senha atualizada. Entre com a nova senha.</p>
+            
+            <p class="form-errors error-text" role="alert" th:if="${erro}" th:text="${erro}"></p>
+            <form th:action="@{/recuperar}" method="post">
+                <div class="field">
+                    <label for="email">E-mail cadastrado</label>
+                    <input id="email" name="email" type="email" th:value="${email}" required maxlength="180" autocomplete="email" placeholder="seuemail@exemplo.com">
+                </div>
+                <button class="btn">Enviar instruções<svg th:replace="~{fragments::icone('seta')}"></svg></button>
+            </form>
+            <a class="text-link" th:href="@{/login}">Voltar para entrar</a>
+        </div>
+    </section>
+</div>
+</body>
+</html>

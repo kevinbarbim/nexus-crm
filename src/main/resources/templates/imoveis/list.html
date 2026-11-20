@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments::head('Imóveis')}"></head>
+<body>
+<svg th:replace="~{fragments::icones}"></svg>
+<aside th:replace="~{fragments::sidebar}"></aside>
+<main>
+<header th:replace="~{fragments::barra}"></header>
+    <div class="top">
+        <div><h1>Imóveis <span class="page-count" th:text="${#lists.size(registros)}"></span></h1><p class="muted">Cadastros disponíveis para o atendimento.</p></div>
+        <a class="btn" th:href="@{/imoveis/novo}"><svg th:replace="~{fragments::icone('mais')}"></svg>Novo imóvel</a>
+    </div>
+    <p th:replace="~{fragments::salvo}"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Lista de imoveis">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Imóvel</th>
+                    <th scope="col">Bairro</th>
+                    <th scope="col">Finalidade</th>
+                    <th scope="col" class="numeric">Valor (R$)</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r:${registros}">
+                    <td th:text="${r.titulo}"></td>
+                    <td th:text="${r.bairro}"></td>
+                    <td th:text="${r.finalidade.descricao}"></td>
+                    <td class="numeric" th:text="${#numbers.formatDecimal(r.valor,1,'POINT',2,'COMMA')}"></td>
+                    <td><span class="tag" th:attr="data-status=${r.situacao.name()}" th:text="${r.situacao.descricao}"></span></td>
+                    <td class="actions">
+                        <th:block th:if="${admin or r.criadoPor.id == actor.id}">
+                            <a class="btn secondary small" th:href="@{/imoveis/{id}/editar(id=${r.id})}">Editar</a>
+                            <form th:action="@{/imoveis/{id}/excluir(id=${r.id})}" method="post" data-confirm="Excluir este imóvel?">
+                                <button class="danger">Excluir</button>
+                            </form>
+                        </th:block>
+                        <span class="muted" th:unless="${admin or r.criadoPor.id == actor.id}">Consulta</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td class="empty" colspan="6">Nenhum imóvel cadastrado.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
