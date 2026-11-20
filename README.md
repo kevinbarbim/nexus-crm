@@ -1,6 +1,6 @@
 # Nexus CRM imobiliário
 
-**Java 17 · Spring Boot 3.5.7 · Thymeleaf · Microsoft SQL Server**
+**Java 17 · Spring Boot 3.5.7 · Microsoft SQL Server**
 
 Projeto acadêmico da Fatec São José do Rio Preto, curso de Informática para
 Negócios - 2026.2. Organiza clientes, imóveis, atividades, visitas, propostas,
