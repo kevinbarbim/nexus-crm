@@ -3,7 +3,7 @@
 **Java 17 · Spring Boot 3.5.7 · Thymeleaf · Microsoft SQL Server**
 
 Projeto acadêmico da Fatec São José do Rio Preto, curso de Informática para
-Negócios — 2026.2. Organiza clientes, imóveis, atividades, visitas, propostas,
+Negócios - 2026.2. Organiza clientes, imóveis, atividades, visitas, propostas,
 usuários e indicadores do estudo de caso do Grupo NexGen.
 
 ![Painel do Nexus](docs/telas/painel.png)
@@ -76,7 +76,7 @@ Por padrão, a conexão usa `localhost:1433`, banco `NexoImob` e usuário `sa`.
 O arquivo `configurar-sqlserver.local.bat` é opcional, para mudar a conexão.
 O exemplo deixa a senha para ser digitada na inicialização.
 
-## Recuperação por e-mail — configuração opcional
+## Recuperação por e-mail - configuração opcional
 
 **Esta versão pública vem sem credenciais reais.** Os logins, cadastros e
 demais telas podem ser usados sem SMTP. Somente o envio de recuperação exige
