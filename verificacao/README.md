@@ -1,4 +1,4 @@
-# Verificações isoladas da revisão 0.3.1
+# Verificações isoladas da revisão 0.3.2
 
 Opcional, para reproduzir a verificação do executável distribuído:
 

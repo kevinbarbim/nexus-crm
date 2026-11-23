@@ -179,4 +179,4 @@ O círculo usa SVG e os números que o controlador do painel já fornece. Com `p
 
 Na apresentação, mostre primeiro os indicadores e as etapas; depois abra a página do funil para comparar as quantidades. Em seguida, alterne o tema e recarregue a página para mostrar que a escolha permanece salva.
 
-Após editar os arquivos do frontend, execute `mvn package`. Copie `target/nexus-0.3.1.jar` para `dist/nexus.jar`, substituindo o executável anterior. O atalho usa o arquivo de `dist`; a troca de arquivos em `src/main/resources` só aparece nele depois dessa atualização.
+Após editar os arquivos do frontend, execute `mvn package`. Copie `target/nexus-0.3.2.jar` para `dist/nexus.jar`, substituindo o executável anterior. O atalho usa o arquivo de `dist`; a troca de arquivos em `src/main/resources` só aparece nele depois dessa atualização.

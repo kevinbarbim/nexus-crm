@@ -1,4 +1,4 @@
-# Anexo A Ficha de diagnóstico organizacional
+# Apêndice B Ficha de diagnóstico organizacional
 
 | Campo | Registro |
 | --- | --- |

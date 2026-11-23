@@ -68,7 +68,7 @@ A síntese preserva a avaliação informada pela equipe, sem acrescentar citaç�
 | Anexo D | Roteiro de referência e síntese da avaliação recebida | Preparado; registro externo datado não fornecido |
 | Anexo E | Problemas, funcionalidades e benefícios esperados | Quadro elaborado; resultados de uso não medidos |
 
-Os anexos estão no relatório e na pasta [anexos](anexos/README.md). As capturas demonstram a interface no ambiente local; a persistência e os objetos T-SQL continuam dependentes da validação em SQL Server.
+Os materiais de apoio estão na pasta [documentos de apoio](anexos/README.md) e são identificados como Apêndices B a F no relatório final. As capturas ilustram a interface. A equipe confirmou a execução local com SQL Server; o [roteiro de validação](Validacao_SQLServer.md) orienta a conferência dos objetos e da persistência na apresentação.
 
 ## Acompanhamento do uso
 

@@ -1,4 +1,4 @@
-# Anexo D Registro de referência da apresentação
+# Apêndice E Registro de referência da apresentação
 
 Data de referência: 5 de outubro de 2026. A data é adotada para organizar o estudo de caso; não estabelece a data efetiva da interação relatada.
 

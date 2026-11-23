@@ -1,12 +1,11 @@
-DOCUMENTACAO ACADEMICA DO NEXUS
+DOCUMENTACAO DO NEXUS 0.3.2
 
-Para instalar e executar, comece pelo README.md na raiz do projeto.
-O roteiro completo de Java, SQL Server e HeidiSQL esta em:
-../docs/Instalacao_Windows_HeidiSQL.md
+Relatorio_Nexus_ABNT.pdf: relatorio final de 50 paginas, atualizado para SQL Server.
+Nexus_Estatistica.xlsx: planilha estatistica com dados ficticios de referencia.
+Guia_Nexus.md: guia de leitura do codigo Java.
 
-Relatorio_Nexus.docx e Relatorio_Nexus.pdf: relatorio academico.
-Nexus_Estatistica.xlsx: analises estatisticas.
-Guia_Nexus.md e ../docs/Guia_do_Codigo.md: explicacao do codigo.
+Video demonstrativo: https://youtu.be/Iw9LiDzFyyQ
+Repositorio: https://github.com/kevinbarbim/nexus-crm
 
-O executavel corrigido ja esta em ../dist/nexus.jar.
-Os instaladores e conferencias para HeidiSQL estao em ../database/heidisql/.
+O relatorio anterior em PDF/Word nao acompanha esta versao. O arquivo vigente
+e Relatorio_Nexus_ABNT.pdf, tanto no repositorio quanto no ZIP executavel.

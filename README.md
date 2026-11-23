@@ -1,6 +1,6 @@
 # Nexus CRM imobiliário
 
-**Java 17 · Spring Boot 3.5.7 · Microsoft SQL Server**
+**Nexus 0.3.2 · Java 17 · Spring Boot 3.5.7 · Microsoft SQL Server**
 
 Projeto acadêmico da Fatec São José do Rio Preto, curso de Informática para
 Negócios - 2026.2. Organiza clientes, imóveis, atividades, visitas, propostas,
@@ -11,7 +11,7 @@ usuários e indicadores do estudo de caso do Grupo NexGen.
 ## Comece aqui
 
 **Para testar sem compilar:** abra a área **Releases** deste repositório e
-baixe **Nexus_Publico_Executavel.zip**, nos Assets. Ele já inclui o JAR
+baixe **Nexus_v0.3.2_Completo.zip**, nos Assets. Ele já inclui o JAR
 corrigido, o código, os scripts e a documentação, sem credenciais reais.
 
 **Para estudar ou alterar o código:** use os fontes deste repositório e
@@ -123,6 +123,14 @@ abre uma conta Gmail; a senha de app deve permanecer privada.
 | Login do site recusado | Use a senha do site, confira o e-mail, a carga inicial e se a conta está ativa |
 | Recuperação não chega | Confira usuário ativo, spam, credencial SMTP, internet e os erros na janela Java |
 
+## Materiais para a entrega
+
+- [Relatório final em PDF](documentacao/Relatorio_Nexus_ABNT.pdf) — 50 páginas.
+- [Planilha estatística](documentacao/Nexus_Estatistica.xlsx).
+- [Vídeo demonstrativo](https://youtu.be/Iw9LiDzFyyQ).
+
+O mesmo relatório acompanha o ZIP executável desta Release.
+
 ## Conferência e documentação
 
 - [Verificar_Nexus_HeidiSQL.sql](database/heidisql/Verificar_Nexus_HeidiSQL.sql): confere a estrutura e a consistência básica.
@@ -135,10 +143,12 @@ de etapa, visita e aceite utilizam procedures. Há dez tabelas, três procedures
 três views, três triggers e três funções. O banco é exclusivamente SQL Server;
 o Java valida o esquema existente e não cria tabelas automaticamente.
 
-O executável passou em **5 verificações de empacotamento**, **34 verificações
-isoladas** e um teste HTTP com repositórios substitutos. Persistência, consultas,
-transações no SQL Server e entrega real pelo Gmail precisam de conferência no
-ambiente de apresentação. O [registro da revisão](docs/Correcao_Executavel.md)
+A preparação da versão 0.3.2 repetiu **5 verificações de empacotamento** e
+**34 verificações isoladas**, com três mensagens em SMTP local. As classes e
+os recursos do aplicativo são os mesmos da revisão 0.3.1. A equipe confirmou
+a execução local com SQL Server e recuperação por Gmail; os testes isolados
+não substituem a conferência de persistência, consultas e transações na
+máquina da apresentação. O [registro da revisão](docs/Correcao_Executavel.md)
 informa o escopo; [verificacao/README.md](verificacao/README.md) explica como repetir
 as verificações opcionais. Para recompilar os fontes, use JDK 17 e Maven com
 `recompilar.bat` ou `bash recompilar.sh`.
@@ -146,8 +156,8 @@ as verificações opcionais. Para recompilar os fontes, use JDK 17 e Maven com
 ## Publicação e download
 
 O [passo a passo para publicar no GitHub](docs/Publicar_no_GitHub.md) mostra
-como enviar os fontes pelo GitHub Desktop e anexar o pacote público executável
-em uma Release. Publique somente os pacotes públicos, sem arquivos locais.
+como enviar os arquivos pelo site e anexar o pacote público executável
+em uma Release. Para esta atualização, siga [Atualizar pelo GitHub Web](docs/Atualizar_GitHub_Web.md). Publique somente os pacotes públicos, sem arquivos locais.
 
 ## Equipe
 

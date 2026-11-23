@@ -1,5 +1,8 @@
 # Revisão 0.3.1 — 20/11/2026
 
+> Registro histórico desta revisão. Para o estado da entrega 0.3.2, consulte [Checklist](Checklist_Requisitos.md) e [Notas da Release](Notas_Release.md).
+
+
 ## Alterações
 
 - Uso exclusivo de SQL Server preservado, sem driver H2.

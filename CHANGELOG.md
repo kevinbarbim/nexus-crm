@@ -1,5 +1,14 @@
 # Histórico de alterações
 
+## 0.3.2 — 23/11/2026
+
+- Relatório final em ABNT incluído no pacote executável.
+- README, checklist, roteiro e links de entrega atualizados.
+- Distinção entre registros históricos, testes isolados e validação pela equipe.
+- Versão do POM, caminhos de recompilação e metadados do JAR alinhados.
+- Classes, recursos, dependências, banco e regras de negócio preservados da 0.3.1.
+- Cinco verificações de empacotamento e 34 verificações isoladas repetidas.
+
 ## 0.3.1 — 20/11/2026
 
 - Persistência exclusiva em SQL Server.

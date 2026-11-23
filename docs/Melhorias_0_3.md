@@ -1,5 +1,8 @@
 # Melhorias da versão 0.3
 
+> Registro histórico desta revisão. Para o estado da entrega 0.3.2, consulte [Checklist](Checklist_Requisitos.md) e [Notas da Release](Notas_Release.md).
+
+
 Esta revisão mantém os módulos do CRM e torna o backend mais direto para a leitura de quem estudou CRUD básico em Spring Boot. A organização continua HTML → formulário → controlador → serviço → repositório → entidade. As funções de login, autorização, recuperação de senha, transações e integração com SQL Server foram preservadas.
 
 ## O que ficou mais simples

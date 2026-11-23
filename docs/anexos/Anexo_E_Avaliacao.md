@@ -1,4 +1,4 @@
-# Anexo E Avaliação da solução
+# Apêndice F Avaliação da solução
 
 | Problema do cenário | Funcionalidade desenvolvida | Benefício esperado |
 | --- | --- | --- |

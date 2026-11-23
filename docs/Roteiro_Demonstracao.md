@@ -1,5 +1,9 @@
 # Roteiro de demonstração — 7 a 9 minutos
 
+Vídeo publicado: https://youtu.be/Iw9LiDzFyyQ.
+Repositório: https://github.com/kevinbarbim/nexus-crm.
+Este roteiro pode ser usado para repetir a demonstração na apresentação.
+
 Apresente o Nexus como proposta de CRM para o Grupo NexGen, de São José do Rio Preto/SP. Use a base SQL Server com os cadastros iniciais e mostre um atendimento completo, do interesse à proposta. A apresentação final deve demonstrar SQL Server, inclusive a persistência após reiniciar o Java.
 
 | Tempo | Demonstrar | Evidência |
@@ -18,10 +22,10 @@ Apresente o Nexus como proposta de CRM para o Grupo NexGen, de São José do Rio
 
 Confira no HeidiSQL os objetos `P`, `V`, `TR`, `FN`, `IF` e `TF`. Para verificar os triggers, use operações pelo Java e consulte o histórico. Em um teste SQL controlado, confira também a rejeição de visita virtual com km > 0 e proposta sem interesse.
 
-Antes da gravação: executar os scripts e os três fluxos reais no SQL Server; concluir o teste de restauração; configurar SMTP; publicar o código completo em um repositório GitHub público; gravar o vídeo sem senhas reais ou dados pessoais. Inserir os links reais no relatório. Esses passos ainda não foram executados nesta versão.
+Para repetir a apresentação, confira os scripts e os três fluxos reais no SQL Server, a persistência após reiniciar e a configuração SMTP quando for demonstrar recuperação. O repositório e o vídeo já foram publicados e seus links constam no relatório. Os comprovantes de backup/restore devem acompanhar a demonstração do bônus.
 
 Para explicar o backend, acompanhe um cadastro do HTML até o repositório usando `Guia_do_Codigo.md`. Mostre `if`, validações e setters; depois explique a transação da proposta e localize suas chamadas SQL. A configuração de segurança pode ser explicada ao final, separada do fluxo principal de CRUD.
 
 ## Material de apoio ao estudo de caso
 
-O roteiro de referência da apresentação à organização está em `anexos/Anexo_D_Apresentacao.md`. O estudo de caso adota 05/10/2026 como data de referência da apresentação. O roteiro deste arquivo continua destinado à gravação técnica final, com SQL Server e persistência; a gravação permanece pendente.
+O roteiro de referência da apresentação à organização está em `anexos/Anexo_D_Apresentacao.md`. O estudo de caso adota 05/10/2026 como data de referência da apresentação. O roteiro deste arquivo orienta a demonstração técnica com SQL Server e persistência; o vídeo publicado está indicado no início.

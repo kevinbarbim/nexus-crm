@@ -1,5 +1,8 @@
 # Atualização do diagnóstico organizacional
 
+> Registro histórico desta revisão. Para o estado da entrega 0.3.2, consulte [Checklist](Checklist_Requisitos.md) e [Notas da Release](Notas_Release.md).
+
+
 Em 12/10/2026, foram incorporados a identificação de Felipe Brito como proprietário, as datas de referência do estudo, os sete processos e os cinco problemas do cenário acadêmico.
 
 O relatório inclui os Anexos A a E: ficha, fluxograma do processo, seis capturas originais da interface, roteiro de referência da apresentação e quadro de problemas, funcionalidades e benefícios esperados. A avaliação positiva já registrada foi preservada. A conclusão, o plano de entrega, o checklist e o README foram alinhados ao diagnóstico preenchido.

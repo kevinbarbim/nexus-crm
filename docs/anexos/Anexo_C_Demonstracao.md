@@ -1,6 +1,6 @@
-# Anexo C Demonstração do Nexus
+# Apêndice D Demonstração do Nexus
 
-As seis imagens são capturas reais da interface incluídas no projeto recebido. Mostram funcionalidades de uma edição anterior da interface; não documentam o uso pela empresa nem comprovam execução em SQL Server. A edição atual deve ser demonstrada novamente com o banco SQL Server.
+As seis imagens são capturas reais da interface incluídas no projeto recebido. Ilustram as telas do sistema e não constituem, isoladamente, prova de uso pela empresa ou de persistência no banco. O vídeo técnico publicado está em https://youtu.be/Iw9LiDzFyyQ.
 
 ## Login e acesso ao Nexus
 

@@ -1,8 +1,7 @@
 # Executável
 
-Para usar sem compilar, abra Releases no repositório e baixe
-`Nexus_Publico_Executavel.zip`. Esse pacote contém `dist/nexus.jar`.
+O pacote `Nexus_v0.3.2_Completo.zip`, nos Assets da Release v0.3.2, inclui `dist/nexus.jar`.
+Para executar, siga o README e abra o iniciador correspondente ao seu sistema.
 
-Neste pacote de fontes, o JAR fica fora do histórico Git. Para construí-lo,
-instale JDK 17 e Maven e execute `recompilar.bat` ou `bash recompilar.sh`.
-O script copia o resultado para `dist/nexus.jar`.
+O repositório Git não versiona o JAR. Para reconstruí-lo, use JDK 17 e Maven
+com `recompilar.bat` ou `bash recompilar.sh`; o resultado é copiado para `dist/nexus.jar`.

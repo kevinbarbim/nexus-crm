@@ -1,4 +1,4 @@
-# Anexo B Mapeamento do processo comercial
+# Apêndice C Mapeamento do processo comercial
 
 O fluxo representa o processo comercial adotado no estudo de caso, com captação, cadastro, qualificação, interesses, visitas, propostas e negociação.
 
