@@ -10,7 +10,8 @@
 As contas corretor da carga têm endereços `.test`, que não recebem e-mails.
 Pelo administrador, crie em Usuários → Novo usuário uma conta ativa com e-mail real para testar o recebimento.
 
-Registre versão do SQL Server, mensagens dos scripts e capturas com os IDs.
-As verificações isoladas da pasta `verificacao` conferem componentes e regras
-com substitutos; persistência, transações SQL e Gmail exigem estes testes reais.
+Registre a versão do SQL Server, as mensagens dos scripts e capturas
+com os IDs dos registros utilizados. Confira a persistência após
+reiniciar o sistema e o funcionamento da recuperação de senha.
+
 Não exponha senhas ou tokens nas capturas e no vídeo.
