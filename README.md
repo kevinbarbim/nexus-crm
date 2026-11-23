@@ -143,14 +143,16 @@ de etapa, visita e aceite utilizam procedures. Há dez tabelas, três procedures
 três views, três triggers e três funções. O banco é exclusivamente SQL Server;
 o Java valida o esquema existente e não cria tabelas automaticamente.
 
-A preparação da versão 0.3.2 repetiu **5 verificações de empacotamento** e
-**34 verificações isoladas**, com três mensagens em SMTP local. As classes e
-os recursos do aplicativo são os mesmos da revisão 0.3.1. A equipe confirmou
-a execução local com SQL Server e recuperação por Gmail; os testes isolados
-não substituem a conferência de persistência, consultas e transações na
-máquina da apresentação. O [registro da revisão](docs/Correcao_Executavel.md)
-informa o escopo; [verificacao/README.md](verificacao/README.md) explica como repetir
-as verificações opcionais. Para recompilar os fontes, use JDK 17 e Maven com
+Durante a preparação da versão 0.3.2, foram executadas 5 verificações
+de empacotamento e 34 verificações isoladas, com três mensagens em
+SMTP local. Esses resultados são históricos; os scripts dessas
+verificações não estão incluídos nesta entrega.
+
+A equipe confirmou a execução local com SQL Server e recuperação
+por Gmail. Para conferir a instalação na máquina da apresentação,
+siga o [roteiro de validação](docs/Validacao_SQLServer.md).
+
+Para recompilar os fontes, use JDK 17 e Maven com
 `recompilar.bat` ou `bash recompilar.sh`.
 
 ## Publicação e download
