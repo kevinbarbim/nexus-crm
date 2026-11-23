@@ -128,7 +128,7 @@ abre uma conta Gmail; a senha de app deve permanecer privada.
 - [Verificar_Nexus_HeidiSQL.sql](database/heidisql/Verificar_Nexus_HeidiSQL.sql): confere a estrutura e a consistência básica.
 - [Testar_Fluxos_Nexus_HeidiSQL.sql](database/heidisql/Testar_Fluxos_Nexus_HeidiSQL.sql): quatro cenários de procedures e triggers em base de avaliação, com reversão dos registros.
 - [Guia do código](docs/Guia_do_Codigo.md), [dicionário](docs/Dicionario_de_Dados.md) e [roteiro de apresentação](docs/Roteiro_Demonstracao.md).
-- Relatório em [PDF](documentacao/Relatorio_Nexus.pdf) e [Word](documentacao/Relatorio_Nexus.docx); [planilha estatística](documentacao/Nexus_Estatistica.xlsx).
+- Relatório em [PDF](documentacao/Relatorio_Nexus_ABNT.pdf); [planilha estatística](documentacao/Nexus_Estatistica.xlsx).
 
 O back-end usa controladores, serviços, repositórios JPA e JDBC; as operações
 de etapa, visita e aceite utilizam procedures. Há dez tabelas, três procedures,
